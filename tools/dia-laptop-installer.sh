@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # --- Configuration ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd ../"$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo ${SCRIPT_DIR}
 SCRIPT_NAME="miro-docker.sh"
 LAUNCHER_NAME="miro-hub"
 INSTALL_DIR="$HOME/.local/bin"
