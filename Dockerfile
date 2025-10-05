@@ -104,7 +104,7 @@ RUN wget -O ~/mdk/sim/launch_full.sh \
 https://gist.githubusercontent.com/AlexandrLucas\
 /703831843f9b46edc2e2032bcd08651f/raw/launch_full.sh && \
 chmod +x ~/mdk/sim/launch_full.sh && \
-sed -i '${/^$/d}' ~/.bashrc && \
+sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc && \
 echo "source ~/mdk/catkin_ws/devel/setup.bash" >> ~/.bashrc
 RUN cd ~/mdk/share/python/miro2/ && \
 git clone --branch miro-docker --single-branch https://github.com/MiRo-projects/dashboard.git
@@ -114,6 +114,7 @@ catkin build && catkin clean -y && catkin build && \
 cd ~/mdk/catkin_ws/build/miro2_msg && make install"
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
+RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
 
 # ---- Get help ----
 RUN yes | unminimize
