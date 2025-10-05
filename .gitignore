@@ -1,1 +1,8 @@
-.vscode/settings.json
+# IDE / OS
+
+.vscode
+.cache/
+
+# WIP stuff
+
+drafts/
