@@ -5,7 +5,7 @@
 #
 # Provides GUI, simulators, mode switching, IP/name management,
 # demo launcher, workspace tools, dashboard, and environment status.
-# Colorized output and tab-completion included.
+# Tab completion is handled separately in /etc/bash_completion.d/miro.
 
 set -euo pipefail
 
@@ -21,49 +21,10 @@ NC="\033[0m"  # No color
 # Pre-flight checks
 # ----------------------
 : "${MIRO_DIR_MDK:?Environment variable MIRO_DIR_MDK not set}"
+: "${MIRO_DIR_SHARE:?Environment variable MIRO_DIR_SHARE not set}"
 : "${MIRO_USER_SETUP:?Environment variable MIRO_USER_SETUP not set}"
 : "${MIRO_ROBOT_NAME:?Environment variable MIRO_ROBOT_NAME not set}"
 : "${MIRO_NETWORK_MODE:?Environment variable MIRO_NETWORK_MODE not set}"
-
-# ----------------------
-# Embedded Bash completion
-# ----------------------
-_miro_completion() {
-    local cur prev
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-
-    local commands="gui mode ip sim ws demo dashboard name status"
-    local mode_args="robot sim"
-    local sim_args="light full"
-    local ws_args="build clean"
-    local demo_args="camr caml mics"
-
-    if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
-    else
-        case "${COMP_WORDS[1]}" in
-            mode)
-                COMPREPLY=( $(compgen -W "$mode_args" -- "$cur") )
-                ;;
-            sim)
-                COMPREPLY=( $(compgen -W "$sim_args" -- "$cur") )
-                ;;
-            ws)
-                COMPREPLY=( $(compgen -W "$ws_args" -- "$cur") )
-                ;;
-            demo)
-                COMPREPLY=( $(compgen -W "$demo_args" -- "$cur") )
-                ;;
-            *)
-                COMPREPLY=()
-                ;;
-        esac
-    fi
-}
-
-complete -F _miro_completion miro
 
 # ----------------------
 # Helper functions
@@ -94,7 +55,61 @@ switch_mode() {
     update_conf_line "MIRO_LOCAL_IP" "$ip"
     export MIRO_LOCAL_IP="$ip"
     export MIRO_NETWORK_MODE="$network_mode"
-    echo -e "${GREEN}Mode switched to: $mode (MIRO_NETWORK_MODE=$network_mode, MIRO_LOCAL_IP=$ip)${NC}"
+    echo -e "${GREEN}Mode switched to: $mode
+  (MIRO_NETWORK_MODE=$network_mode, MIRO_LOCAL_IP=$ip)${NC}"
+}
+
+run_gui() {
+    cd "$MIRO_DIR_MDK/bin/shared" && ./client_gui.py
+}
+
+run_sim() {
+    local sim_type="${1:-full}"
+    case "$sim_type" in
+        light|full)
+            cd "$MIRO_DIR_MDK/sim" && ./launch_${sim_type}.sh
+            ;;
+        *)
+            echo -e "${RED}Invalid simulator type: $sim_type. Valid: light, full${NC}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+run_ws() {
+    local ws_arg="${1:-}"
+    cd "$MIRO_DIR_MDK/catkin_ws/src"
+    case "$ws_arg" in
+        build)
+            cd "$MIRO_DIR_MDK/catkin_ws" && catkin build
+            cd "$MIRO_DIR_MDK/catkin_ws/build/miro2_msg" && make install
+            ;;
+        clean)
+            cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
+            ;;
+        "")
+            ;;  # just cd into workspace
+        *)
+            echo -e "${RED}Invalid workspace argument: $ws_arg. Valid: build, clean${NC}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+run_demo() {
+    local DEMO_SCRIPT="$MIRO_DIR_SHARE/python/miro2/core/client_demo.py"
+    # Validate arguments
+    for arg in "$@"; do
+        case "$arg" in
+            camr|caml|mics) ;;
+            *) echo -e "${RED}Invalid demo argument: $arg${NC}" >&2; exit 1 ;;
+        esac
+    done
+    python3 "$DEMO_SCRIPT" "$@"
+}
+
+run_dashboard() {
+    python3 "$MIRO_DIR_SHARE/python/miro2/dashboard/miro_dashboard.py"
 }
 
 show_help() {
@@ -116,20 +131,20 @@ Commands:
       Show the current robot IP. Use 'update' to change it.
 
   sim [light|full]
-      Launch the simulator.
+      Launch MiRo simulation in Gazebo.
       - Default: full
-      - light: lightweight simulator
+      - light: No Gazebo-ROS bridge, less output, no extra assets 
 
   ws [build|clean]
-      Change directory to the catkin workspace source.
+      Change directory to the MDK catkin workspace.
       - Optional arguments: build, clean
       - Default: cd into workspace
 
   demo [arguments...]
-      Launch the base demo script and pass all arguments directly.
+      Launcher for MiRo's autonomous (demo) mode. Arguments: camr, caml, mics
 
   dashboard
-      Launch the MiRo dashboard application.
+      Visualization for the MiRo demo mode.
 
   name [update]
       Show the current robot name. Use 'update' to change it.
@@ -147,9 +162,7 @@ COMMAND="${1:-}"
 
 case "$COMMAND" in
 
-    gui)
-        cd "$MIRO_DIR_MDK/bin/shared" && ./client_gui.py
-        ;;
+    gui) run_gui ;;
 
     mode)
         MODE_ARG="${2:-}"
@@ -164,7 +177,7 @@ case "$COMMAND" in
                 switch_mode "sim" "$CONTAINER_IP" "loopback"
             fi
         else
-            echo -e "${RED}Invalid argument: $MODE_ARG. Valid options: robot, sim${NC}" >&2
+            echo -e "${RED}Invalid mode argument: $MODE_ARG. Valid: robot, sim${NC}" >&2
             exit 1
         fi
         ;;
@@ -176,55 +189,20 @@ case "$COMMAND" in
             update_conf_line "MIRO_STATIC_IP" "$NEW_IP"
             echo -e "${GREEN}Updated MIRO_ROBOT_IP to $NEW_IP${NC}"
         else
-            echo -e "${YELLOW}Current MIRO_ROBOT_IP=$MIRO_ROBOT_IP${NC}"
+            echo -e "${YELLOW}Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}${NC}"
         fi
         ;;
 
-    sim)
-        SIM_ARG="${2:-full}"
-        case "$SIM_ARG" in
-            light)
-                cd "$MIRO_DIR_MDK/sim" && ./launch_sim.sh
-                ;;
-            full)
-                cd "$MIRO_DIR_MDK/sim" && ./launch_full.sh
-                ;;
-            *)
-                echo -e "${RED}Invalid argument: $SIM_ARG. Valid options: light, full${NC}" >&2
-                exit 1
-                ;;
-        esac
-        ;;
+    sim) run_sim "${2:-full}" ;;
 
-    ws)
-        cd "$MIRO_DIR_MDK/catkin_ws/src"
-        WS_ARG="${2:-}"
-        case "$WS_ARG" in
-            build)
-                cd "$MIRO_DIR_MDK/catkin_ws" && catkin build
-                ;;
-            clean)
-                cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
-                ;;
-            "")
-                ;;  # just cd into workspace
-            *)
-                echo -e "${RED}Invalid argument: $WS_ARG. Valid options: build, clean${NC}" >&2
-                exit 1
-                ;;
-        esac
-        ;;
+    ws) run_ws "${2:-}" ;;
 
     demo)
-        DEMO_SCRIPT="$MIRO_DIR_SHARE/python/miro2/core/client_demo.py"
         shift
-        python3 "$DEMO_SCRIPT" "$@"
+        run_demo "$@"
         ;;
 
-    dashboard)
-        DASHBOARD_APP="$MIRO_DIR_SHARE/python/miro2/dashboard/app.py"
-        python3 "$DASHBOARD_APP"
-        ;;
+    dashboard) run_dashboard ;;
 
     name)
         if [[ "${2:-}" == "update" ]]; then
@@ -241,13 +219,11 @@ case "$COMMAND" in
         echo -e "${YELLOW}MiRo Status:${NC}"
         echo -e "  Mode: $MIRO_NETWORK_MODE"
         echo -e "  Local IP: ${MIRO_LOCAL_IP:-unknown}"
-        echo -e "  Robot IP: $MIRO_ROBOT_IP"
-        echo -e "  Robot Name: $MIRO_ROBOT_NAME"
+        echo -e "  Robot IP: ${MIRO_ROBOT_IP:-unknown}"
+        echo -e "  Robot Name: ${MIRO_ROBOT_NAME:-unknown}"
         ;;
 
-    ""|-h|--help)
-        show_help
-        ;;
+    ""|-h|--help) show_help ;;
 
     *)
         echo -e "${RED}Unknown command: $COMMAND${NC}" >&2
