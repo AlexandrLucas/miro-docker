@@ -2,7 +2,7 @@ services:
   miro:
     image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
     container_name: ${CONTAINER_NAME}
-    # hostname: miro  # Actually, no.
+    # hostname: miro  # Breaks MDK setup.bash
     network_mode: host
     privileged: true
     tty: true
@@ -13,6 +13,10 @@ services:
     environment:
       DISPLAY: ${DISPLAY}
       QT_X11_NO_MITSHM: "1"
+      GDK_BACKEND: "x11"
+      GDK_DISABLE_XSHM: "1"
+      OPENCV_VIDEOIO_MSMF_DISABLE: "1"
+      OPENCV_VIDEOIO_X11_NO_SHM: "1"
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "all"
       PULSE_SERVER: ${PULSE_SERVER}
