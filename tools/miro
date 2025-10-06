@@ -52,7 +52,6 @@ switch_mode() {
     local ip="$2"
     local network_mode="$3"
     update_conf_line "MIRO_NETWORK_MODE" "$network_mode"
-    update_conf_line "MIRO_LOCAL_IP" "$ip"
     export MIRO_LOCAL_IP="$ip"
     export MIRO_NETWORK_MODE="$network_mode"
     echo -e "${GREEN}Mode switched to: $mode
@@ -65,20 +64,25 @@ run_gui() {
 
 run_sim() {
     local sim_type="${1:-full}"
+
     case "$sim_type" in
-        light|full)
-            cd "$MIRO_DIR_MDK/sim" && ./launch_${sim_type}.sh
+        bare|full)
+            cd "$MIRO_DIR_MDK/sim" || exit 1
+            if [ "$sim_type" = "bare" ]; then
+                ./launch_sim.sh
+            else
+                ./launch_full.sh
+            fi
             ;;
         *)
-            echo -e "${RED}Invalid simulator type: $sim_type. Valid: light, full${NC}" >&2
-            exit 1
+            echo -e "${RED}Valid arguments are: bare, full${NC}" >&2
             ;;
     esac
 }
 
 run_ws() {
     local ws_arg="${1:-}"
-    cd "$MIRO_DIR_MDK/catkin_ws/src"
+
     case "$ws_arg" in
         build)
             cd "$MIRO_DIR_MDK/catkin_ws" && catkin build
@@ -88,7 +92,8 @@ run_ws() {
             cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
             ;;
         "")
-            ;;  # just cd into workspace
+            cd "$MIRO_DIR_MDK/catkin_ws/src" || return 1
+            ;;
         *)
             echo -e "${RED}Invalid workspace argument: $ws_arg. Valid: build, clean${NC}" >&2
             exit 1
@@ -130,21 +135,24 @@ Commands:
   ip [update]
       Show the current robot IP. Use 'update' to change it.
 
-  sim [light|full]
+  sim [bare|full]
       Launch MiRo simulation in Gazebo.
       - Default: full
-      - light: No Gazebo-ROS bridge, less output, no extra assets 
+      - bare: No Gazebo-ROS bridge, less output, no extra assets.
 
   ws [build|clean]
       Change directory to the MDK catkin workspace.
       - Optional arguments: build, clean
-      - Default: cd into workspace
 
   demo [arguments...]
-      Launcher for MiRo's autonomous (demo) mode. Arguments: camr, caml, mics
+    Launches MiRo in autonomous (demo) mode.
+    Optional arguments enable additional features:
+        camr  - activate right camera
+        caml  - activate left camera
+        mics  - activate microphones
 
   dashboard
-      Visualization for the MiRo demo mode.
+      Visualisation for the MiRo demo mode.
 
   name [update]
       Show the current robot name. Use 'update' to change it.
@@ -185,6 +193,11 @@ case "$COMMAND" in
     ip)
         if [[ "${2:-}" == "update" ]]; then
             read -rp "Enter new robot IP: " NEW_IP
+            if [[ ! $NEW_IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] \
+                || { IFS='.' read -r o1 o2 o3 o4 <<< "$NEW_IP"; \
+                    ((o1>255||o2>255||o3>255||o4>255)); }; then
+                echo -e "Please double check the IP address."
+            fi
             export MIRO_ROBOT_IP="$NEW_IP"
             update_conf_line "MIRO_STATIC_IP" "$NEW_IP"
             echo -e "${GREEN}Updated MIRO_ROBOT_IP to $NEW_IP${NC}"

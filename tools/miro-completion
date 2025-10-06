@@ -13,7 +13,7 @@ _miro_completion() {
 
     # Arguments for specific commands
     local mode_args="robot sim"
-    local sim_args="light full"
+    local sim_args="bare full"
     local ws_args="build clean"
     local demo_args="camr caml mics"
 

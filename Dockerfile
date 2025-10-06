@@ -34,6 +34,7 @@ eog \
 libegl1-mesa-dev \
 libgles2-mesa-dev \
 net-tools \
+iproute2 \
 tree \
 dos2unix \
 psmisc \
