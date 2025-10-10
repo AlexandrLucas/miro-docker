@@ -58,8 +58,8 @@ update_conf_line() {
 ensure_ip_env() {
     mkdir -p "$MIRO_DIR_CONFIG"
     cat > "$MIRO_ENV_FILE" <<EOF
-export MIRO_LOCAL_IP="${MIRO_LOCAL_IP:-unset}"
-export MIRO_ROBOT_IP="${MIRO_ROBOT_IP:-unset}"
+export MIRO_LOCAL_IP=${MIRO_LOCAL_IP:-unset}
+export MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}
 EOF
 }
 
@@ -115,7 +115,8 @@ run_ws() {
             cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
             ;;
         "")
-            cd "$MIRO_DIR_MDK/catkin_ws/src" || return 1
+            echo "To enter the MiRo workspace, run:"
+            echo "  cd \"$MIRO_DIR_MDK/catkin_ws/src\""
             ;;
         *)
             echo -e "${RED}Invalid workspace argument: $ws_arg. Valid: build, clean${NC}" >&2
@@ -167,7 +168,7 @@ Commands:
       - light: no Gazebo-ROS bridge, less output, no extra assets.
 
   ws [build|clean]
-      Change directory to the MDK catkin workspace.
+      Show the path to the MDK catkin workspace.
       - Optional arguments: build, clean
 
   demo [arguments...]
