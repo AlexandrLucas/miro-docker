@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+#
+# miro - unified wrapper command
+# Swiss army knife of the MiRo MDK
+#
+# Provides GUI, simulator, mode switching, IP/name management,
+# demo launcher, workspace tools, dashboard, and environment status.
+# Tab completion is handled separately in /etc/bash_completion.d/miro.
+
+set -euo pipefail
+
+# ----------------------
+# Colours
+# ----------------------
+GREEN="\033[0;32m"
+YELLOW="\033[1;33m"
+RED="\033[0;31m"
+NC="\033[0m"  # No colour
+
+# ----------------------
+# Pre-flight checks
+# ----------------------
+: "${MIRO_DIR_MDK:?Environment variable MIRO_DIR_MDK not set}"
+: "${MIRO_DIR_SHARE:?Environment variable MIRO_DIR_SHARE not set}"
+: "${MIRO_USER_SETUP:?Environment variable MIRO_USER_SETUP not set}"
+: "${MIRO_NETWORK_MODE:?Environment variable MIRO_NETWORK_MODE not set}"
+: "${MIRO_DIR_CONFIG:?Environment variable MIRO_DIR_CONFIG not set}"
+
+MIRO_ENV_FILE="$MIRO_DIR_CONFIG/.miro_env"
+
+# Load existing persistent environment if present
+if [[ -f "$MIRO_ENV_FILE" ]]; then
+    source "$MIRO_ENV_FILE"
+fi
+
+# ----------------------
+# Helper functions
+# ----------------------
+confirm() {
+    read -rp "$1 [y/N]: " response
+    case "$response" in
+        [yY][eE][sS]|[yY]) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+update_conf_line() {
+    local VAR="$1"
+    local VAL="$2"
+    if grep -q "^export $VAR=" "$MIRO_USER_SETUP"; then
+        sed -i "s|^export $VAR=.*|export $VAR=$VAL|" "$MIRO_USER_SETUP"
+    else
+        echo "export $VAR=$VAL" >> "$MIRO_USER_SETUP"
+    fi
+}
+
+# Persist MIRO_LOCAL_IP and MIRO_ROBOT_IP in .miro_env
+ensure_ip_env() {
+    mkdir -p "$MIRO_DIR_CONFIG"
+    cat > "$MIRO_ENV_FILE" <<EOF
+export MIRO_LOCAL_IP="${MIRO_LOCAL_IP:-unset}"
+export MIRO_ROBOT_IP="${MIRO_ROBOT_IP:-unset}"
+EOF
+}
+
+switch_mode() {
+    local mode="$1"
+    local ip="$2"
+    local network_mode="$3"
+
+    # Update only network mode in user_setup.bash
+    update_conf_line "MIRO_NETWORK_MODE" "$network_mode"
+    export MIRO_NETWORK_MODE="$network_mode"
+
+    # Export IPs and persist in .miro_env
+    export MIRO_LOCAL_IP="$ip"
+    ensure_ip_env
+
+    echo -e "${GREEN}Mode switched to: $mode
+  (MIRO_NETWORK_MODE=$network_mode, MIRO_LOCAL_IP=$ip)${NC}"
+}
+
+run_gui() {
+    cd "$MIRO_DIR_MDK/bin/shared" && ./client_gui.py
+}
+
+run_sim() {
+    local sim_type="${1:-full}"
+
+    case "$sim_type" in
+        light|full)
+            cd "$MIRO_DIR_MDK/sim" || exit 1
+            if [ "$sim_type" = "light" ]; then
+                ./launch_sim.sh
+            else
+                ./launch_full.sh
+            fi
+            ;;
+        *)
+            echo -e "${RED}Valid arguments are: light, full${NC}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+run_ws() {
+    local ws_arg="${1:-}"
+
+    case "$ws_arg" in
+        build)
+            cd "$MIRO_DIR_MDK/catkin_ws" && catkin build
+            cd "$MIRO_DIR_MDK/catkin_ws/build/miro2_msg" && make install
+            ;;
+        clean)
+            cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
+            ;;
+        "")
+            cd "$MIRO_DIR_MDK/catkin_ws/src" || return 1
+            ;;
+        *)
+            echo -e "${RED}Invalid workspace argument: $ws_arg. Valid: build, clean${NC}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+run_demo() {
+    local DEMO_SCRIPT="$MIRO_DIR_SHARE/python/miro2/core/client_demo.py"
+
+    # Prepend hyphen if arguments are provided
+    local args=()
+    for arg in "$@"; do
+        case "$arg" in
+            camr|caml|mics) args+=("- $arg") ;;
+            *) echo -e "${RED}Invalid demo argument: $arg${NC}" >&2; exit 1 ;;
+        esac
+    done
+
+    python3 "$DEMO_SCRIPT" "${args[@]}"
+}
+
+run_dashboard() {
+    python3 "$MIRO_DIR_SHARE/python/miro2/dashboard/miro_dashboard.py"
+}
+
+show_help() {
+    cat <<'EOF'
+Usage: miro <command> [argument]
+
+Commands:
+
+  gui
+      Launch the MiRo GUI client.
+
+  mode {robot|sim}
+      Show or switch the current operation mode.
+      - No argument displays current mode and robot IP.
+      - robot: static network mode, MIRO_LOCAL_IP = host IP
+      - sim: loopback network mode, MIRO_LOCAL_IP = container/internal IP
+
+  ip [update]
+      Show the current robot IP. Use 'update' to change it.
+
+  sim [light|full]
+      Launch MiRo simulation in Gazebo.
+      - Default: full
+      - light: no Gazebo-ROS bridge, less output, no extra assets.
+
+  ws [build|clean]
+      Change directory to the MDK catkin workspace.
+      - Optional arguments: build, clean
+
+  demo [arguments...]
+      Launches MiRo in autonomous (demo) mode.
+      Optional arguments enable additional features:
+          camr  - activate right camera
+          caml  - activate left camera
+          mics  - activate microphones
+
+  dashboard
+      Visualisation for the MiRo demo mode.
+
+  name [update]
+      Show the current robot name. Use 'update' to change it.
+
+  status
+      Show a summary of current MiRo environment:
+          mode, network mode, local IP, robot IP, robot name
+EOF
+}
+
+# ----------------------
+# Main
+# ----------------------
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+
+    gui) run_gui ;;
+
+    mode)
+        MODE_ARG="${2:-}"
+        if [[ -z "$MODE_ARG" ]]; then
+            echo -e "${YELLOW}Current mode: $MIRO_NETWORK_MODE${NC}"
+            echo -e "${YELLOW}Robot IP: ${MIRO_ROBOT_IP:-unset}${NC}"
+        elif [[ "$MODE_ARG" == "robot" || "$MODE_ARG" == "sim" ]]; then
+            if [[ "$MODE_ARG" == "robot" ]]; then
+                HOST_IP=$(ip route get 1 | awk '{print $7; exit}')
+                switch_mode "robot" "$HOST_IP" "static"
+            else
+                CONTAINER_IP=$(hostname -I | tr ' ' '\n' | grep -v '^127\.' | head -n1)
+                switch_mode "sim" "$CONTAINER_IP" "loopback"
+            fi
+        else
+            echo -e "${RED}Invalid mode argument: $MODE_ARG. Valid: robot, sim${NC}" >&2
+            exit 1
+        fi
+        ;;
+
+    ip)
+        if [[ "${2:-}" == "update" ]]; then
+            read -rp "Enter new robot IP: " NEW_IP
+            export MIRO_ROBOT_IP="$NEW_IP"
+            ensure_ip_env
+            echo -e "${GREEN}Updated MIRO_ROBOT_IP to $NEW_IP${NC}"
+        else
+            echo -e "${YELLOW}Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}${NC}"
+        fi
+        ;;
+
+    sim) run_sim "${2:-full}" ;;
+
+    ws) run_ws "${2:-}" ;;
+
+    demo)
+        shift
+        run_demo "$@"
+        ;;
+
+    dashboard) run_dashboard ;;
+
+    name)
+        if [[ "${2:-}" == "update" ]]; then
+            read -rp "Enter new robot name: " NEW_NAME
+            export MIRO_ROBOT_NAME="$NEW_NAME"
+            update_conf_line "MIRO_ROBOT_NAME" "$NEW_NAME"
+            echo -e "${GREEN}Updated robot name to $NEW_NAME${NC}"
+        else
+            echo -e "${YELLOW}Current robot name: $MIRO_ROBOT_NAME${NC}"
+        fi
+        ;;
+
+    status)
+        echo -e "${YELLOW}MiRo Status:${NC}"
+        echo -e "  Mode: $MIRO_NETWORK_MODE"
+        echo -e "  Local IP: ${MIRO_LOCAL_IP:-unset}"
+        echo -e "  Robot IP: ${MIRO_ROBOT_IP:-unset}"
+        echo -e "  Robot Name: ${MIRO_ROBOT_NAME:-unset}"
+        ;;
+
+    ""|-h|--help) show_help ;;
+
+    *)
+        echo -e "${RED}Unknown command: $COMMAND${NC}" >&2
+        show_help
+        exit 1
+        ;;
+esac

@@ -7,10 +7,14 @@ on:
   schedule:
     - cron: '15 19 * * 0'
   push:
-    branches: [ "master" ]
-    tags: [ 'v*.*.*' ] # Use Semantic Versioning
+    branches:
+      - "master"
+      - "dev"
+    tags:
+      - 'v*.*.*'    # Use Semantic Versioning
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - "master"
 
 jobs:
   build-and-push:
@@ -38,7 +42,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable=${{ github.ref_name == 'master' }}
             type=ref,event=tag
-            type=sha
+            type=sha,enable=${{ github.ref_name == 'dev' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

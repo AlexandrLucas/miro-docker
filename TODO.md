@@ -11,7 +11,6 @@
 
 - [ ] Docker compose for Mac
 - [ ] Fix sound
-- [ ] Fix Cairo dependency
 - [ ] README.md
 
 ---
@@ -20,13 +19,17 @@
 
 - [ ] Document environment variables
 - [ ] Plug-in (buttons) to similate touch in Gazebo
+- [ ] Handle running multiple containers in `miro-docker.sh`
 
 ---
 
 ## 🧪 In Progress
 
-- [x] Introduce a single `miro` command for all common operations inside docker
+- [ ] Fix Cairo dependency
+- [ ] Fix occasional GDK X (MIT-SHM) error
 
 ---
 
 ## 📦 Completed
+
+- [x] Introduce a single `miro` command for all common operations inside docker

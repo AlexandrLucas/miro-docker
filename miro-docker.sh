@@ -140,7 +140,7 @@ start() {
 
     echo "✅ Container $CONTAINER_NAME with ID $CID started successfully."
     echo "💡 Tip: Use 'term' to attach a shell, 'save' to snapshot, 'stop' to remove."
-    
+
     #TODO: multi-container support
 }
 

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Bash completion for the MiRo wrapper command
+
+# Completion function
+_miro_completion() {
+    local cur prev
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    # Top-level commands
+    local commands="gui mode ip sim ws demo dashboard name status"
+
+    # Arguments for specific commands
+    local mode_args="robot sim"
+    local sim_args="bare full"
+    local ws_args="build clean"
+    local demo_args="camr caml mics"
+
+    # First argument: command
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+        return
+    fi
+
+    # Subsequent arguments
+    case "${COMP_WORDS[1]}" in
+        mode)
+            COMPREPLY=( $(compgen -W "$mode_args" -- "$cur") )
+            ;;
+        sim)
+            COMPREPLY=( $(compgen -W "$sim_args" -- "$cur") )
+            ;;
+        ws)
+            COMPREPLY=( $(compgen -W "$ws_args" -- "$cur") )
+            ;;
+        demo)
+            COMPREPLY=( $(compgen -W "$demo_args" -- "$cur") )
+            ;;
+        ip|name|gui|dashboard|status)
+            COMPREPLY=()  # No specific completion for these
+            ;;
+        *)
+            COMPREPLY=()
+            ;;
+    esac
+}
+
+# Register the completion function
+complete -F _miro_completion miro
