@@ -132,7 +132,7 @@ run_demo() {
     local args=()
     for arg in "$@"; do
         case "$arg" in
-            camr|caml|mics) args+=("- $arg") ;;
+            camr|caml|mics) args+=(" - $arg") ;;
             *) echo -e "${RED}Invalid demo argument: $arg${NC}" >&2; exit 1 ;;
         esac
     done
