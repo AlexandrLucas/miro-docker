@@ -98,7 +98,7 @@ RUN mkdir -p ~/pkgs && cd ~/pkgs/ && wget --no-check-certificate \
 -O mdk_2-230105.tgz && \
 tar -xvzf mdk_2-230105.tgz && \
 cd ~/pkgs/mdk-230105/bin/deb64 && \
-echo "~/.miro2/config/.miro_env" >> ~/.bashrc && \
+echo "source ~/.miro2/config/.miro_env" >> ~/.bashrc && \
 ./install_mdk.sh
 
 # ---- Extra MDK scripts ----
