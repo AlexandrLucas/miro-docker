@@ -117,7 +117,6 @@ cd ~/mdk/catkin_ws/build/miro2_msg && make install"
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
-RUN miro mode sim
 
 # ---- Get help ----
 RUN yes | unminimize
