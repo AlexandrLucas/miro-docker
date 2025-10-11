@@ -120,16 +120,15 @@ COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
 
 # ---- Fix for Cairo introspection ----
-RUN apt install --reinstall -y \
+RUN apt-get update && apt-get install --reinstall -y \
 python3-gi \
-python3-gi-cairo \
 python3-cairo \
-gir1.2-cairo-1.0 \
 gir1.2-gtk-3.0 \
+gir1.2-cairo-1.0 \
 libcairo2-dev \
-libgirepository1.0-dev
+&& rm -rf /var/lib/apt/lists/*
 
-# ---- Get help ----
+ # ---- Get help ----
 RUN yes | unminimize
 
 # ---- Final cleanup ----
