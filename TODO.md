@@ -26,12 +26,12 @@
 
 ## 🧪 In Progress
 
-- [x] Fix sound in MiRo GUI
-- [x] Cannot run multiple `miro demo` instances 
-- [x] Fix Cairo dependency
+- [x] Fix playing sound in MiRo GUI
+- [x] Cannot run multiple `miro demo` instances
 
 ---
 
 ## 📦 Completed
 
 - [x] Introduce a single `miro` command for all common operations inside docker
+- [x] Fix Cairo dependency (mic visualisation)

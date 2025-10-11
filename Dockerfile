@@ -9,8 +9,6 @@ FROM ubuntu:focal
 # ---- Set environment variables ----
 ENV DEBIAN_FRONTEND=noninteractive \
     EDITOR='nano -w' \
-    USER_UID=1000 \
-    USER_GID=1000 \
     NO_AT_BRIDGE=1
 # Set USER to anything to avoid breaking mdk/setup.bash
 ENV USER=miro

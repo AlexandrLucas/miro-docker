@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
  - Refactored Dockerfile for better readability
+ - Moved most variables from Dockerfile to compose and .env
 
 ### Fixed
  - Cairo (Mics plotting in MiRo GUI)
