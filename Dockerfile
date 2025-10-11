@@ -1,5 +1,8 @@
 # ---- Dockerfile: MiRo Developer Kit ----
 
+# ---- Build parameters ----
+ARG GIT_BRANCH=master
+
 # ---- Start with bare-bones Ubuntu 20.04 image ----
 FROM ubuntu:focal
 
@@ -89,9 +92,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Download and install MDK ----
-RUN wget --no-check-certificate -P ~/pkgs/ 'https://docs.google.com/uc?export=\
-download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' \
-    -O mdk_2-230105.tgz && \
+RUN mkdir -p ~/pkgs && cd ~/pkgs/ && wget --no-check-certificate \
+    'https://docs.google.com/uc?export=\
+download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' -O mdk_2-230105.tgz && \
     tar -xvzf mdk_2-230105.tgz && \
     cd ~/pkgs/mdk-230105/bin/deb64 && \
     echo "source ~/.miro2/config/.miro_env" >> ~/.bashrc && \
@@ -137,8 +140,10 @@ RUN python3 -m pip install \
     dash-daq \
     dash-bootstrap-components
 
-# ---- Get help ----
-RUN yes | unminimize
+# ---- Get help (when in production) ----
+RUN if [ "${GIT_BRANCH}" = "master" ]; then \
+        yes | unminimize; \
+    fi
 
 # ---- Final cleanup ----
 RUN apt-get update && apt-get upgrade -y
