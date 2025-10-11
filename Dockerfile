@@ -87,12 +87,6 @@ python3-pydantic \
 python3-rosdep \
 && rm -rf /var/lib/apt/lists/*
 
-# ---- PIP ----
-RUN pip3 install apriltag \
-dash \
-dash-daq \
-dash-bootstrap-components
-
 # ---- MDK ----
 RUN mkdir -p ~/pkgs && cd ~/pkgs/ && wget --no-check-certificate \
 'https://docs.google.com/uc?export=download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' \
@@ -124,11 +118,20 @@ RUN apt-get update && apt-get install --reinstall -y \
 python3-gi \
 python3-cairo \
 gir1.2-gtk-3.0 \
-gir1.2-cairo-1.0 \
 libcairo2-dev \
+libgirepository1.0-dev \
 && rm -rf /var/lib/apt/lists/*
 
- # ---- Get help ----
+# ---- PIP ----
+RUN pip3 install --upgrade pip setuptools wheel
+RUN pip3 install apriltag \
+dash \
+dash-daq \
+dash-bootstrap-components \
+pycairo \
+PyGObject
+
+# ---- Get help ----
 RUN yes | unminimize
 
 # ---- Final cleanup ----

@@ -9,14 +9,15 @@
 
 ## 🧩 Medium Priority
 
-- [ ] Docker compose for Mac
-- [ ] Fix sound
 - [ ] README.md
+- [ ] Docker compose for Mac
+- [ ] Document environment variables
 
 ---
 
 ## 🌱 Low Priority
 
+- [ ] Fix occasional GDK X (MIT-SHM) error
 - [ ] Document environment variables
 - [ ] Plug-in (buttons) to similate touch in Gazebo
 - [ ] Handle running multiple containers in `miro-docker.sh`
@@ -25,8 +26,9 @@
 
 ## 🧪 In Progress
 
-- [ ] Fix Cairo dependency
-- [ ] Fix occasional GDK X (MIT-SHM) error
+- [x] Fix sound in MiRo GUI
+- [x] Cannot run multiple `miro demo` instances 
+- [x] Fix Cairo dependency
 
 ---
 
