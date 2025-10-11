@@ -2,20 +2,17 @@
 #
 # miro - unified wrapper command
 # Swiss army knife of the MiRo MDK
-#
-# Provides GUI, simulator, mode switching, IP/name management,
-# demo launcher, workspace tools, dashboard, and environment status.
-# Tab completion is handled separately in /etc/bash_completion.d/miro.
 
 set -euo pipefail
+IFS=$'\n\t'
 
 # ----------------------
-# Colours
+# Colours and logging
 # ----------------------
-GREEN="\033[0;32m"
-YELLOW="\033[1;33m"
-RED="\033[0;31m"
-NC="\033[0m"  # No colour
+info()    { echo -e "\033[1;33m$*\033[0m"; }   # Yellow
+success() { echo -e "\033[0;32m$*\033[0m"; }   # Green
+error()   { echo -e "\033[0;31m$*\033[0m"; }   # Red
+log()     { echo "[$(date '+%H:%M:%S')] $*"; }
 
 # ----------------------
 # Pre-flight checks
@@ -29,9 +26,7 @@ NC="\033[0m"  # No colour
 MIRO_ENV_FILE="$MIRO_DIR_CONFIG/.miro_env"
 
 # Load existing persistent environment if present
-if [[ -f "$MIRO_ENV_FILE" ]]; then
-    source "$MIRO_ENV_FILE"
-fi
+[[ -f "$MIRO_ENV_FILE" ]] && source "$MIRO_ENV_FILE"
 
 # ----------------------
 # Helper functions
@@ -45,8 +40,7 @@ confirm() {
 }
 
 update_conf_line() {
-    local VAR="$1"
-    local VAL="$2"
+    local VAR="$1" VAL="$2"
     if grep -q "^export $VAR=" "$MIRO_USER_SETUP"; then
         sed -i "s|^export $VAR=.*|export $VAR=$VAL|" "$MIRO_USER_SETUP"
     else
@@ -54,34 +48,67 @@ update_conf_line() {
     fi
 }
 
-# Persist MIRO_LOCAL_IP and MIRO_ROBOT_IP in .miro_env
-ensure_ip_env() {
+persist_env_var() {
+    local VAR="$1" VAL="$2"
     mkdir -p "$MIRO_DIR_CONFIG"
-    cat > "$MIRO_ENV_FILE" <<EOF
-export MIRO_LOCAL_IP=${MIRO_LOCAL_IP:-unset}
-export MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}
-EOF
+    [[ -f "$MIRO_ENV_FILE" ]] || touch "$MIRO_ENV_FILE"
+    grep -q "^export $VAR=" "$MIRO_ENV_FILE" 2>/dev/null \
+        && sed -i "s|^export $VAR=.*|export $VAR=$VAL|" "$MIRO_ENV_FILE" \
+        || echo "export $VAR=$VAL" >> "$MIRO_ENV_FILE"
+}
+
+ensure_ip_env() {
+    persist_env_var MIRO_LOCAL_IP "${MIRO_LOCAL_IP:-unset}"
+    persist_env_var MIRO_ROBOT_IP "${MIRO_ROBOT_IP:-unset}"
+}
+
+get_host_ip() {
+    local ip iface
+    # Wi-Fi card: wlp*
+    iface=$(ip -o link show | awk -F: '/wlp/ {print $2; exit}' | tr -d ' ')
+    # fallback: wlan*
+    [[ -z "$iface" ]] && iface=$(ip -o link show | awk -F: '/wlan/ {print $2; exit}' | tr -d ' ')
+    # fallback: eth*
+    [[ -z "$iface" ]] && iface=$(ip -o link show | awk -F: '/eth/ {print $2; exit}' | tr -d ' ')
+
+    if [[ -n "$iface" ]]; then
+        ip=$(ip -o -4 addr show dev "$iface" | awk '{print $4}' | cut -d/ -f1 | head -n1)
+    fi
+
+    # fallback: prompt user
+    if [[ -z "${ip:-}" ]]; then
+        read -rp "Could not auto-detect host IP. Enter manually: " ip
+    fi
+
+    echo "$ip"
 }
 
 switch_mode() {
     local mode="$1"
-    local ip="$2"
-    local network_mode="$3"
+    local network_mode="$2"
+    local ip
 
-    # Update only network mode in user_setup.bash
+    if [[ "$mode" == "sim" ]]; then
+        ip="127.0.0.1"
+        persist_env_var MIRO_GAZEBO_IP "$ip"   # store for Gazebo master URI alignment
+    else
+        ip=$(get_host_ip)
+        persist_env_var MIRO_GAZEBO_IP ""      # clear if switching to robot mode
+    fi
+
     update_conf_line "MIRO_NETWORK_MODE" "$network_mode"
     export MIRO_NETWORK_MODE="$network_mode"
 
-    # Export IPs and persist in .miro_env
     export MIRO_LOCAL_IP="$ip"
     ensure_ip_env
 
-    echo -e "${GREEN}Mode switched to: $mode
-  (MIRO_NETWORK_MODE=$network_mode, MIRO_LOCAL_IP=$ip)${NC}"
+    success "Mode switched to: $mode (MIRO_NETWORK_MODE=$network_mode, MIRO_LOCAL_IP=$ip)"
 }
 
 run_gui() {
-    cd "$MIRO_DIR_MDK/bin/shared" && ./client_gui.py
+    pushd "$MIRO_DIR_MDK/bin/shared" > /dev/null
+    ./client_gui.py
+    popd > /dev/null
 }
 
 run_sim() {
@@ -89,15 +116,16 @@ run_sim() {
 
     case "$sim_type" in
         light|full)
-            cd "$MIRO_DIR_MDK/sim" || exit 1
-            if [ "$sim_type" = "light" ]; then
+            pushd "$MIRO_DIR_MDK/sim" > /dev/null
+            if [[ "$sim_type" == "light" ]]; then
                 ./launch_sim.sh
             else
                 ./launch_full.sh
             fi
+            popd > /dev/null
             ;;
         *)
-            echo -e "${RED}Valid arguments are: light, full${NC}" >&2
+            error "Valid arguments are: light, full" >&2
             exit 1
             ;;
     esac
@@ -108,18 +136,23 @@ run_ws() {
 
     case "$ws_arg" in
         build)
-            cd "$MIRO_DIR_MDK/catkin_ws" && catkin build
-            cd "$MIRO_DIR_MDK/catkin_ws/build/miro2_msg" && make install
+            pushd "$MIRO_DIR_MDK/catkin_ws" > /dev/null
+            catkin build
+            pushd build/miro2_msg > /dev/null
+            make install
+            popd > /dev/null
+            popd > /dev/null
             ;;
         clean)
-            cd "$MIRO_DIR_MDK/catkin_ws" && catkin clean
+            pushd "$MIRO_DIR_MDK/catkin_ws" > /dev/null
+            catkin clean
+            popd > /dev/null
             ;;
         "")
-            echo "To enter the MiRo workspace, run:"
-            echo "  cd \"$MIRO_DIR_MDK/catkin_ws/src\""
+            info "To enter the MiRo workspace, run: cd \"$MIRO_DIR_MDK/catkin_ws/src\""
             ;;
         *)
-            echo -e "${RED}Invalid workspace argument: $ws_arg. Valid: build, clean${NC}" >&2
+            error "Invalid workspace argument: $ws_arg. Valid: build, clean" >&2
             exit 1
             ;;
     esac
@@ -127,17 +160,7 @@ run_ws() {
 
 run_demo() {
     local DEMO_SCRIPT="$MIRO_DIR_SHARE/python/miro2/core/client_demo.py"
-
-    # Prepend hyphen if arguments are provided
-    local args=()
-    for arg in "$@"; do
-        case "$arg" in
-            camr|caml|mics) args+=(" - $arg") ;;
-            *) echo -e "${RED}Invalid demo argument: $arg${NC}" >&2; exit 1 ;;
-        esac
-    done
-
-    python3 "$DEMO_SCRIPT" "${args[@]}"
+    python3 "$DEMO_SCRIPT" "$@"
 }
 
 run_dashboard() {
@@ -157,7 +180,7 @@ Commands:
       Show or switch the current operation mode.
       - No argument displays current mode and robot IP.
       - robot: static network mode, MIRO_LOCAL_IP = host IP
-      - sim: loopback network mode, MIRO_LOCAL_IP = container/internal IP
+      - sim: loopback network mode, MIRO_LOCAL_IP = 127.0.0.1
 
   ip [update]
       Show the current robot IP. Use 'update' to change it.
@@ -202,18 +225,14 @@ case "$COMMAND" in
     mode)
         MODE_ARG="${2:-}"
         if [[ -z "$MODE_ARG" ]]; then
-            echo -e "${YELLOW}Current mode: $MIRO_NETWORK_MODE${NC}"
-            echo -e "${YELLOW}Robot IP: ${MIRO_ROBOT_IP:-unset}${NC}"
+            info "Current mode: $MIRO_NETWORK_MODE"
+            info "Robot IP: ${MIRO_ROBOT_IP:-unset}"
         elif [[ "$MODE_ARG" == "robot" || "$MODE_ARG" == "sim" ]]; then
-            if [[ "$MODE_ARG" == "robot" ]]; then
-                HOST_IP=$(ip route get 1 | awk '{print $7; exit}')
-                switch_mode "robot" "$HOST_IP" "static"
-            else
-                CONTAINER_IP=$(hostname -I | tr ' ' '\n' | grep -v '^127\.' | head -n1)
-                switch_mode "sim" "$CONTAINER_IP" "loopback"
-            fi
+            local network_mode
+            [[ "$MODE_ARG" == "robot" ]] && network_mode="static" || network_mode="loopback"
+            switch_mode "$MODE_ARG" "$network_mode"
         else
-            echo -e "${RED}Invalid mode argument: $MODE_ARG. Valid: robot, sim${NC}" >&2
+            error "Invalid mode argument: $MODE_ARG. Valid: robot, sim"
             exit 1
         fi
         ;;
@@ -222,10 +241,10 @@ case "$COMMAND" in
         if [[ "${2:-}" == "update" ]]; then
             read -rp "Enter new robot IP: " NEW_IP
             export MIRO_ROBOT_IP="$NEW_IP"
-            ensure_ip_env
-            echo -e "${GREEN}Updated MIRO_ROBOT_IP to $NEW_IP${NC}"
+            persist_env_var MIRO_ROBOT_IP "$NEW_IP"
+            success "Updated MIRO_ROBOT_IP to $NEW_IP"
         else
-            echo -e "${YELLOW}Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}${NC}"
+            info "Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}"
         fi
         ;;
 
@@ -245,24 +264,25 @@ case "$COMMAND" in
             read -rp "Enter new robot name: " NEW_NAME
             export MIRO_ROBOT_NAME="$NEW_NAME"
             update_conf_line "MIRO_ROBOT_NAME" "$NEW_NAME"
-            echo -e "${GREEN}Updated robot name to $NEW_NAME${NC}"
+            success "Updated robot name to $NEW_NAME"
         else
-            echo -e "${YELLOW}Current robot name: $MIRO_ROBOT_NAME${NC}"
+            info "Current robot name: ${MIRO_ROBOT_NAME:-unset}"
         fi
         ;;
 
     status)
-        echo -e "${YELLOW}MiRo Status:${NC}"
-        echo -e "  Mode: $MIRO_NETWORK_MODE"
-        echo -e "  Local IP: ${MIRO_LOCAL_IP:-unset}"
-        echo -e "  Robot IP: ${MIRO_ROBOT_IP:-unset}"
-        echo -e "  Robot Name: ${MIRO_ROBOT_NAME:-unset}"
+        info "MiRo Status:"
+        echo "  Mode: $MIRO_NETWORK_MODE"
+        echo "  Local IP: ${MIRO_LOCAL_IP:-unset}"
+        echo "  Robot IP: ${MIRO_ROBOT_IP:-unset}"
+        echo "  Gazebo IP: ${MIRO_GAZEBO_IP:-unset}"
+        echo "  Robot Name: ${MIRO_ROBOT_NAME:-unset}"
         ;;
 
     ""|-h|--help) show_help ;;
 
     *)
-        echo -e "${RED}Unknown command: $COMMAND${NC}" >&2
+        error "Unknown command: $COMMAND"
         show_help
         exit 1
         ;;

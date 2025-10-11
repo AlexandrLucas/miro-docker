@@ -133,8 +133,9 @@ start() {
     fi
 
     echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE..."
+# ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" up -d --build
-
+# ------------------------------------------------------------------------------
     CID=$(docker ps -q --filter "name=$CONTAINER_NAME" --no-trunc | head -n1)
     echo "$CID" > "$CONTAINER_FILE"
 
@@ -154,7 +155,9 @@ stop() {
     fi
 
     echo "🛑 Stopping container $CID..."
+# ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" down
+# ------------------------------------------------------------------------------
     echo "✅ Containers stopped."
 }
 
@@ -164,10 +167,28 @@ term() {
 
     echo "💡 Reminder: When done, save your work with 'save' or stop the container using 'stop'."
     echo "🔗 Attaching shell to container $CID. Press CTRL+D to exit."
+
+    # Detect if NVIDIA runtime is available
+    if docker info 2>/dev/null | grep -q "Runtimes:.*nvidia"; then
+        GPU_ENV=(
+            -e NVIDIA_VISIBLE_DEVICES=all
+            -e NVIDIA_DRIVER_CAPABILITIES=all
+        )
+    else
+        echo "⚙️ NVIDIA runtime not found — continuing without GPU support."
+        GPU_ENV=()
+    fi
+# ------------------------------------------------------------------------------
     docker exec -it --privileged \
-        -e DISPLAY="$DISPLAY" \
+        -e DISPLAY="${DISPLAY}" \
+        -e XDG_RUNTIME_DIR="/run/user/${USER_UID}" \
+        -e PULSE_SERVER="unix:/run/user/${USER_UID}/pulse/native" \
         -e QT_X11_NO_MITSHM=1 \
+        -e GDK_BACKEND=x11 \
+        -e GDK_DISABLE_XSHM=1 \
+        "${GPU_ENV[@]}" \
         "$CID" /bin/bash
+# ------------------------------------------------------------------------------
 }
 
 # --- Save container state as new image ---
