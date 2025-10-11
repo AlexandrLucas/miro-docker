@@ -123,7 +123,7 @@ libgirepository1.0-dev \
 && rm -rf /var/lib/apt/lists/*
 
 # ---- PIP ----
-RUN pip3 install --upgrade pip setuptools wheel
+RUN pip3 install --upgrade pip setuptools wheel importlib-metadata
 RUN pip3 install apriltag \
 dash \
 dash-daq \
