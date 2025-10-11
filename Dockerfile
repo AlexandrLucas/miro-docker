@@ -14,6 +14,7 @@ ENV EDITOR='nano -w'
 ENV USER_UID=1000
 ENV USER_GID=1000
 ENV NO_AT_BRIDGE=1
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # ---- Set up all we need for interactive use ----
 RUN apt-get update && apt-get install -y \
