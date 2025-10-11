@@ -39,6 +39,7 @@ tree \
 dos2unix \
 psmisc \
 ffmpeg \
+software-properties-common \
 && rm -rf /var/lib/apt/lists/*
 
 # ---- Set locale ----
@@ -117,6 +118,16 @@ cd ~/mdk/catkin_ws/build/miro2_msg && make install"
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
+
+# ---- Fix for Cairo introspection ----
+RUN apt install --reinstall -y \
+python3-gi \
+python3-gi-cairo \
+python3-cairo \
+gir1.2-cairo-1.0 \
+gir1.2-gtk-3.0 \
+libcairo2-dev \
+libgirepository1.0-dev
 
 # ---- Get help ----
 RUN yes | unminimize
