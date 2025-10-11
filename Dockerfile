@@ -47,18 +47,18 @@ RUN update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 ENV LANG=en_GB.UTF-8 \
     LC_ALL=en_GB.UTF-8
 
-# ---- Use bash for what's below ----
-SHELL ["/bin/bash", "-c"]
-
 # Try to install starship, but don't fail if it doesn't work
-RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes || true
+RUN curl -sS 'https://starship.rs/install.sh' | sh -s -- --yes || true
 # Only add starship init if starship was successfully installed
 RUN if [ -f "/usr/local/bin/starship" ]; then \
         echo 'eval "$(starship init bash)"' >> ~/.bashrc; \
     fi
 
+# ---- Use bash for what's below ----
+SHELL ["/bin/bash", "-c"]
+
 # ---- ROS 1 & friends ----
-RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | \
+RUN curl -s 'https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc' | \
     apt-key add - && \
     echo "deb http://packages.ros.org/ros/ubuntu focal main" > \
     /etc/apt/sources.list.d/ros.list
@@ -89,9 +89,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Download and install MDK ----
-RUN mkdir -p ~/pkgs && cd ~/pkgs/ && wget --no-check-certificate \
-    'https://docs.google.com/uc?export=download&\
-id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' \
+RUN wget --no-check-certificate -P ~/pkgs/ 'https://docs.google.com/uc?export=\
+download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' \
     -O mdk_2-230105.tgz && \
     tar -xvzf mdk_2-230105.tgz && \
     cd ~/pkgs/mdk-230105/bin/deb64 && \
@@ -100,14 +99,14 @@ id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' \
 
 # ---- Extra MDK scripts ----
 RUN wget -O ~/mdk/sim/launch_full.sh \
-    https://gist.githubusercontent.com/AlexandrLucas\
-    /703831843f9b46edc2e2032bcd08651f/raw/launch_full.sh && \
+    'https://gist.githubusercontent.com/AlexandrLucas/\
+703831843f9b46edc2e2032bcd08651f/raw/launch_full.sh' && \
     chmod +x ~/mdk/sim/launch_full.sh && \
     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc \
     && echo "source ~/mdk/catkin_ws/devel/setup.bash" >> ~/.bashrc
 RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
-    -single-branch https://github.com/MiRo-projects/dashboard.git
-RUN cd ~/mdk/catkin_ws/src && git clone https://github.com/AlexandrLucas/COM3528
+    -single-branch 'https://github.com/MiRo-projects/dashboard.git'
+RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
 RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
     catkin build && catkin clean -y && catkin build && \
     cd ~/mdk/catkin_ws/build/miro2_msg && make install
