@@ -7,13 +7,13 @@ ARG GIT_BRANCH=master
 FROM ubuntu:focal
 
 # ---- Set environment variables ----
-ENV DEBIAN_FRONTEND=noninteractive
-ENV USERNAME=miro
-ENV USER=${USERNAME}
-ENV EDITOR='nano -w'
-ENV USER_UID=1000
-ENV USER_GID=1000
-ENV NO_AT_BRIDGE=1
+ENV DEBIAN_FRONTEND=noninteractive \
+    EDITOR='nano -w' \
+    USER_UID=1000 \
+    USER_GID=1000 \
+    NO_AT_BRIDGE=1
+# Set USER to anything to avoid breaking mdk/setup.bash
+ENV USER=miro
 
 # ---- Set up basics for interactive use ----
 RUN apt-get update && apt-get install -y \
@@ -118,12 +118,14 @@ RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
 RUN <<'EOT'
 if [ -f "/usr/local/bin/starship" ]; then
   cat <<'EOF' >> ~/.bashrc
+
 # Initialize Starship prompt
 eval "$(starship init bash)"
 EOF
 fi
 EOT
 RUN cat <<'EOF' >> ~/.bashrc
+
 # MDK
 source ~/.miro2/config/.miro_env
 source ~/mdk/setup.bash
