@@ -14,7 +14,6 @@ ENV EDITOR='nano -w'
 ENV USER_UID=1000
 ENV USER_GID=1000
 ENV NO_AT_BRIDGE=1
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # ---- Set up all we need for interactive use ----
 RUN apt-get update && apt-get install -y \
@@ -90,6 +89,11 @@ RUN apt-get update && apt-get install -y \
     python3-wstool \
     python3-pydantic \
     python3-rosdep \
+    python3-gi \
+    python3-cairo \
+    gir1.2-gtk-3.0 \
+    libcairo2-dev \
+    libgirepository1.0-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Download and install MDK ----
@@ -118,24 +122,8 @@ COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
 
-# ---- Fix for Cairo introspection ----
-RUN apt-get update && apt-get install --reinstall -y \
-    python3-gi \
-    python3-cairo \
-    gir1.2-gtk-3.0 \
-    libcairo2-dev \
-    libgirepository1.0-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 # ---- PIP ----
-RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install --upgrade \
-    setuptools==66.0.0 \
-    wheel \
-    importlib-metadata==6.8.0
-RUN python3 -m pip install \
-    pycairo \
-    PyGObject \
+RUN pip install \
     apriltag \
     dash \
     dash-daq \
@@ -147,8 +135,6 @@ RUN if [ "${GIT_BRANCH}" = "master" ]; then \
     fi
 
 # ---- Final cleanup ----
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get autoremove -y && apt-get autoclean -y
 RUN rm -rf  \
     ~/.wget-hsts \
     /var/lib/apt/lists/* \
