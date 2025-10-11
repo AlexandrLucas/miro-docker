@@ -129,6 +129,9 @@ RUN pip install \
     dash-daq \
     dash-bootstrap-components
 
+# ---- Fix for Cairo introspection ----
+RUN pip install --force-reinstall pycairo pygobject
+
 # ---- Get help (when in production) ----
 RUN if [ "${GIT_BRANCH}" = "master" ]; then \
         yes | unminimize; \
