@@ -108,7 +108,7 @@ RUN wget -O ~/mdk/sim/launch_full.sh \
     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc \
     && echo "source ~/mdk/catkin_ws/devel/setup.bash" >> ~/.bashrc
 RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
-    -single-branch 'https://github.com/MiRo-projects/dashboard.git'
+    --single-branch 'https://github.com/MiRo-projects/dashboard.git'
 RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
 RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
     catkin build && catkin clean -y && catkin build && \
