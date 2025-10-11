@@ -52,10 +52,6 @@ ENV LANG=en_GB.UTF-8 \
 
 # Try to install starship, but don't fail if it doesn't work
 RUN curl -sS 'https://starship.rs/install.sh' | sh -s -- --yes || true
-# Only add starship init if starship was successfully installed
-RUN if [ -f "/usr/local/bin/starship" ]; then \
-        echo 'eval "$(starship init bash)"' >> ~/.bashrc; \
-    fi
 
 # ---- Use bash for what's below ----
 SHELL ["/bin/bash", "-c"]
@@ -102,25 +98,36 @@ RUN mkdir -p ~/pkgs && cd ~/pkgs/ && wget --no-check-certificate \
 download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' -O mdk_2-230105.tgz && \
     tar -xvzf mdk_2-230105.tgz && \
     cd ~/pkgs/mdk-230105/bin/deb64 && \
-    echo "source ~/.miro2/config/.miro_env" >> ~/.bashrc && \
     ./install_mdk.sh
 
 # ---- Extra MDK scripts ----
 RUN wget -O ~/mdk/sim/launch_full.sh \
     'https://gist.githubusercontent.com/AlexandrLucas/\
 703831843f9b46edc2e2032bcd08651f/raw/launch_full.sh' && \
-    chmod +x ~/mdk/sim/launch_full.sh && \
-    sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc \
-    && echo "source ~/mdk/catkin_ws/devel/setup.bash" >> ~/.bashrc
+    chmod +x ~/mdk/sim/launch_full.sh
 RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
     --single-branch 'https://github.com/MiRo-projects/dashboard.git'
 RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
-RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
-    catkin build && catkin clean -y && catkin build && \
-    cd ~/mdk/catkin_ws/build/miro2_msg && make install
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
-RUN echo "source /etc/bash_completion.d/miro-completion" >> ~/.bashrc
+
+# ---- Update .bashrc ----
+RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
+    sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc
+# Add Starship prompt if installed
+RUN if [ -f "/usr/local/bin/starship" ]; then \
+    cat <<'EOF' >> ~/.bashrc
+# Initialize Starship prompt
+eval "$(starship init bash)"
+EOF
+fi
+RUN cat <<'EOF' >> ~/.bashrc
+# MDK
+source ~/.miro2/config/.miro_env
+source ~/mdk/setup.bash
+source ~/mdk/catkin_ws/devel/setup.bash
+source /etc/bash_completion.d/miro-completion
+EOF
 
 # ---- PIP ----
 RUN pip install \
@@ -138,6 +145,9 @@ RUN if [ "${GIT_BRANCH}" = "master" ]; then \
     fi
 
 # ---- Final cleanup ----
+RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
+catkin build && catkin clean -y && catkin build && \
+cd ~/mdk/catkin_ws/build/miro2_msg && make install
 RUN rm -rf  \
     ~/.wget-hsts \
     /var/lib/apt/lists/* \
