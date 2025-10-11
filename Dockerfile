@@ -15,7 +15,7 @@ ENV USER_UID=1000
 ENV USER_GID=1000
 ENV NO_AT_BRIDGE=1
 
-# ---- Set up all we need for interactive use ----
+# ---- Set up basics for interactive use ----
 RUN apt-get update && apt-get install -y \
     apt-utils \
     locales \
@@ -100,7 +100,7 @@ download&id=1vNODaenljocVWalM4cOW4Kax-RB4U3nh' -O mdk_2-230105.tgz && \
     cd ~/pkgs/mdk-230105/bin/deb64 && \
     ./install_mdk.sh
 
-# ---- Extra MDK scripts ----
+# ---- Add extra MDK scripts ----
 RUN wget -O ~/mdk/sim/launch_full.sh \
     'https://gist.githubusercontent.com/AlexandrLucas/\
 703831843f9b46edc2e2032bcd08651f/raw/launch_full.sh' && \
@@ -115,12 +115,14 @@ COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' -e 's/\n\{2,\}/\n\n/g' ~/.bashrc
 # Add Starship prompt if installed
-RUN if [ -f "/usr/local/bin/starship" ]; then \
-    cat <<'EOF' >> ~/.bashrc
+RUN <<'EOT'
+if [ -f "/usr/local/bin/starship" ]; then
+  cat <<'EOF' >> ~/.bashrc
 # Initialize Starship prompt
 eval "$(starship init bash)"
 EOF
 fi
+EOT
 RUN cat <<'EOF' >> ~/.bashrc
 # MDK
 source ~/.miro2/config/.miro_env
