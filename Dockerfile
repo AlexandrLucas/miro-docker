@@ -108,7 +108,7 @@ RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
 RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
-RUN touch "~/.miro2/config/miro-robot-ip"
+RUN touch ~/.miro2/config/miro-robot-ip
 
 # ---- Update .bashrc ----
 RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
