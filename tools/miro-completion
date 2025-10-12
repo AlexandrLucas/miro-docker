@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 # Bash completion for the MiRo wrapper command
 
-# Completion function
+# <TAB> Completion function
 _miro_completion() {
-    local cur prev
+    local cur prev cmd
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
+    cmd="${COMP_WORDS[1]}"
 
-    # Top-level commands
+    # --- Top-level commands ---
     local commands="gui mode ip sim ws demo dashboard name status"
 
-    # Arguments for specific commands
+    # --- Subcommand argument sets ---
     local mode_args="robot sim"
-    local sim_args="bare full"
+    local sim_args="light full"
     local ws_args="build clean"
     local demo_args="camr caml mics"
+    local ip_args="update"
+    local name_args="update"
 
-    # First argument: command
+    # --- If completing first argument, list all commands ---
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
         return
     fi
 
-    # Subsequent arguments
-    case "${COMP_WORDS[1]}" in
+    # --- Subcommand-specific completions ---
+    case "$cmd" in
         mode)
             COMPREPLY=( $(compgen -W "$mode_args" -- "$cur") )
             ;;
@@ -37,14 +40,21 @@ _miro_completion() {
         demo)
             COMPREPLY=( $(compgen -W "$demo_args" -- "$cur") )
             ;;
-        ip|name|gui|dashboard|status)
-            COMPREPLY=()  # No specific completion for these
+        ip)
+            # Only suggest 'update' if user has started typing an argument
+            [[ $COMP_CWORD -gt 1 ]] && COMPREPLY=( $(compgen -W "$ip_args" -- "$cur") )
+            ;;
+        name)
+            [[ $COMP_CWORD -gt 1 ]] && COMPREPLY=( $(compgen -W "$name_args" -- "$cur") )
+            ;;
+        gui|dashboard|status)
+            COMPREPLY=()  # No completions
             ;;
         *)
-            COMPREPLY=()
+            COMPREPLY=()  # Unknown command fallback
             ;;
     esac
 }
 
-# Register the completion function
+# --- Register the completion function ---
 complete -F _miro_completion miro

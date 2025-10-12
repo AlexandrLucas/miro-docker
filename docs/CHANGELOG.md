@@ -4,6 +4,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [v3.0.0] - 2025-10-11
+### Added
+ - Conditional builds
+ - More docs
+
+### Changed
+ - Refactored Dockerfile for better readability
+ - Moved most variables from Dockerfile to compose and .env
+
+### Fixed
+ - Cairo (Mics plotting in MiRo GUI)
+
 ## [v2.0.0] - 2025-10-05
 ### Added
 - `miro`, one command to rule them all (to be used inside docker)

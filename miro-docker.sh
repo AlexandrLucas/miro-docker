@@ -41,13 +41,15 @@
 
 set -euo pipefail
 
-# --- Default environment variables ---
+# --- Settings ---
+# ------------------------------------------------------------------------------
 DISPLAY="${DISPLAY:-:0}"
 BASE_IMAGE_NAME="${IMAGE_NAME:-alexandrlucas/miro-docker}"
 BASE_IMAGE_TAG="${IMAGE_TAG:-latest}"
 BASE_CONTAINER_NAME="${CONTAINER_NAME:-miro-docker}"
-CONTAINER_FILE="$HOME/.designated_container"
+CONTAINER_ID_FILE="$HOME/.designated_container"
 COMPOSE_FILE="compose.yaml"
+# ------------------------------------------------------------------------------
 
 COMMAND=${1:-}
 
@@ -75,14 +77,14 @@ ask_confirm() {
 }
 
 check_running() {
-    if [ ! -f "$CONTAINER_FILE" ]; then
+    if [ ! -f "$CONTAINER_ID_FILE" ]; then
         echo "❌ No running container recorded."
         return 1
     fi
     local cid
-    cid=$(<"$CONTAINER_FILE")
+    cid=$(<"$CONTAINER_ID_FILE")
     if [ -z "$cid" ]; then
-        echo "❌ No container ID found in $CONTAINER_FILE."
+        echo "❌ No container ID found in $CONTAINER_ID_FILE."
         return 1
     fi
     # Check if container is actually running
@@ -133,10 +135,11 @@ start() {
     fi
 
     echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE..."
+# ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" up -d --build
-
+# ------------------------------------------------------------------------------
     CID=$(docker ps -q --filter "name=$CONTAINER_NAME" --no-trunc | head -n1)
-    echo "$CID" > "$CONTAINER_FILE"
+    echo "$CID" > "$CONTAINER_ID_FILE"
 
     echo "✅ Container $CONTAINER_NAME with ID $CID started successfully."
     echo "💡 Tip: Use 'term' to attach a shell, 'save' to snapshot, 'stop' to remove."
@@ -154,20 +157,20 @@ stop() {
     fi
 
     echo "🛑 Stopping container $CID..."
+# ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" down
+# ------------------------------------------------------------------------------
     echo "✅ Containers stopped."
 }
 
 # --- Attach shell to last used container ---
 term() {
     CID=$(check_running 2>/dev/null) || { echo "⚠️ Cannot attach: no running containers."; return; }
-
     echo "💡 Reminder: When done, save your work with 'save' or stop the container using 'stop'."
     echo "🔗 Attaching shell to container $CID. Press CTRL+D to exit."
-    docker exec -it --privileged \
-        -e DISPLAY="$DISPLAY" \
-        -e QT_X11_NO_MITSHM=1 \
-        "$CID" /bin/bash
+# ------------------------------------------------------------------------------
+    docker exec -it --privileged "$CID" /bin/bash
+# ------------------------------------------------------------------------------
 }
 
 # --- Save container state as new image ---

@@ -9,9 +9,9 @@
 
 ## 🧩 Medium Priority
 
-- [ ] Docker compose for Mac
-- [ ] Fix sound
 - [ ] README.md
+- [ ] Docker compose for Mac
+- [ ] Document environment variables
 
 ---
 
@@ -25,11 +25,14 @@
 
 ## 🧪 In Progress
 
-- [ ] Fix Cairo dependency
 - [ ] Fix occasional GDK X (MIT-SHM) error
+- [ ] Fix tone not playing in MiRo GUI
 
 ---
 
 ## 📦 Completed
 
+- [x] Cannot run multiple `miro demo` instances
+- [x] More robust IP handling in `miro`
 - [x] Introduce a single `miro` command for all common operations inside docker
+- [x] Fix Cairo dependency (mics visualisation)
