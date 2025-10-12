@@ -4,7 +4,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [v2.1.0] - 2025-10-11
+## [v3.0.0] - 2025-10-11
 ### Added
  - Conditional builds
 

@@ -108,6 +108,7 @@ RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
 RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
+RUN touch "~/.miro2/config/miro-robot-ip"
 
 # ---- Update .bashrc ----
 RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
@@ -117,7 +118,7 @@ RUN <<'EOT'
 if [ -f "/usr/local/bin/starship" ]; then
   cat <<'EOF' >> ~/.bashrc
 
-# Initialize Starship prompt
+# Initialise Starship prompt
 eval "$(starship init bash)"
 EOF
 fi
@@ -125,7 +126,7 @@ EOT
 RUN cat <<'EOF' >> ~/.bashrc
 
 # MDK
-source ~/.miro2/config/.miro_env
+export MIRO_ROBOT_IP=$(cat ~/.miro2/config/miro-robot-ip 2>/dev/null || echo "")
 source ~/mdk/setup.bash
 source ~/mdk/catkin_ws/devel/setup.bash
 source /etc/bash_completion.d/miro-completion

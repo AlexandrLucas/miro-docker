@@ -1,6 +1,6 @@
 # IDE / OS
 
-.vscode
+.vscode/
 .cache/
 
 # WIP stuff

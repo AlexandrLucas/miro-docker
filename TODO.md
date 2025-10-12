@@ -17,7 +17,6 @@
 
 ## 🌱 Low Priority
 
-- [ ] Fix occasional GDK X (MIT-SHM) error
 - [ ] Document environment variables
 - [ ] Plug-in (buttons) to similate touch in Gazebo
 - [ ] Handle running multiple containers in `miro-docker.sh`
@@ -26,7 +25,9 @@
 
 ## 🧪 In Progress
 
-- [x] Fix playing sound in MiRo GUI
+- [x] Fix occasional GDK X (MIT-SHM) error
+- [x] More robust IP handling in `miro`
+- [x] Fix tone not playing in MiRo GUI
 - [x] Cannot run multiple `miro demo` instances
 
 ---
@@ -34,4 +35,4 @@
 ## 📦 Completed
 
 - [x] Introduce a single `miro` command for all common operations inside docker
-- [x] Fix Cairo dependency (mic visualisation)
+- [x] Fix Cairo dependency (mics visualisation)
