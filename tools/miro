@@ -146,15 +146,20 @@ run_ws() {
 run_demo() {
     pushd "$MIRO_DIR_SHARE/python/miro2/core/" > /dev/null || exit 1
 
-    [[ $# -ne 1 ]] && { error "Usage: run_demo {caml|camr|mics}"; popd > /dev/null; exit 1; }
-
-    case "$1" in
-        # Prepend ' - ' if an argument is provided
-        camr|caml|mics) python3 client_demo.py " - $1" ;;
-        *) error "Invalid demo argument: $1"; popd > /dev/null; exit 1 ;;
-    esac
-    popd > /dev/null
-}_
+    if [[ $# -gt 1 ]]; then
+        error "Usage: run_demo [caml|camr|mics]"
+        popd > /dev/null
+        exit 1
+    elif [[ $# -eq 0 ]]; then
+        python3 client_demo.py
+    elif [[ "$1" == "caml" || "$1" == "camr" || "$1" == "mics" ]]; then
+        python3 client_demo.py - "$1"
+    else
+        error "Invalid demo argument: $1"
+        popd > /dev/null
+        exit 1
+    fi
+}
 
 run_dashboard() {
     python3 "$MIRO_DIR_SHARE/python/miro2/dashboard/miro_dashboard.py"
