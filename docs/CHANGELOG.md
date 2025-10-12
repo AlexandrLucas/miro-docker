@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [v3.0.0] - 2025-10-11
 ### Added
  - Conditional builds
+ - More docs
 
 ### Changed
  - Refactored Dockerfile for better readability

@@ -82,6 +82,9 @@ switch_mode() {
         ip=$(get_host_ip)
         update_conf_line "MIRO_STATIC_IP" "$ip"
         export MIRO_STATIC_IP="$ip"
+        echo "robot" > ${MIRO_DIR_CONFIG}/miro-mode
+    else
+        echo "sim" > ${MIRO_DIR_CONFIG}/miro-mode
     fi
 
     success "Mode switched to: $mode."
@@ -141,18 +144,17 @@ run_ws() {
 }
 
 run_demo() {
-    pushd "$MIRO_DIR_SHARE/python/miro2/core/" > /dev/null
-    # Prepend ' - ' if an argument is provided
-    local args=()
-    for arg in "$@"; do
-        case "$arg" in
-            camr|caml|mics) args+=(" - $arg") ;;
-            *) echo -e "${RED}Invalid demo argument: $arg${NC}" >&2; exit 1 ;;
-        esac
-    done
-    python3 client_demo.py "${args[@]}"
+    pushd "$MIRO_DIR_SHARE/python/miro2/core/" > /dev/null || exit 1
+
+    [[ $# -ne 1 ]] && { error "Usage: run_demo {caml|camr|mics}"; popd > /dev/null; exit 1; }
+
+    case "$1" in
+        # Prepend ' - ' if an argument is provided
+        camr|caml|mics) python3 client_demo.py " - $1" ;;
+        *) error "Invalid demo argument: $1"; popd > /dev/null; exit 1 ;;
+    esac
     popd > /dev/null
-}
+}_
 
 run_dashboard() {
     python3 "$MIRO_DIR_SHARE/python/miro2/dashboard/miro_dashboard.py"
@@ -262,8 +264,8 @@ case "$COMMAND" in
     status)
         info "MiRo Status:"
         echo "  Mode: $MIRO_NETWORK_MODE"
-        echo "  Local IP: ${MIRO_ROBOT_IP:-unset}"
-        echo "  Robot IP: ${MIRO_STATIC_IP:-unset}"
+        echo "  Host IP: ${MIRO_STATIC_IP:-unset}"
+        echo "  Robot IP: ${MIRO_ROBOT_IP:-unset}"
         echo "  Robot Name: ${MIRO_ROBOT_NAME:-unset}"
         ;;
 

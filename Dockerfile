@@ -109,6 +109,7 @@ RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM352
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
 RUN echo "192.168.138.101" > "/root/.miro2/config/miro-robot-ip"
+RUN echo "sim" > "/root/.miro2/config/miro-mode"
 
 # ---- Update .bashrc ----
 RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
@@ -123,13 +124,24 @@ eval "$(starship init bash)"
 EOF
 fi
 EOT
-RUN cat <<'EOF' >> ~/.bashrc
-
+RUN cat <<'EOF' > ~/.bashrc_miro
 # MDK
-export MIRO_ROBOT_IP=$(cat ~/.miro2/config/miro-robot-ip 2>/dev/null || echo "")
+if [ ! -f ~/.miro2/config/miro-mode ]; then
+    echo "sim" > ~/.miro2/config/miro-mode
+elif grep -qi "robot" ~/.miro2/config/miro-mode; then
+    export MIRO_ROBOT_IP=$(cat ~/.miro2/config/miro-robot-ip || echo "")
+else
+    unset MIRO_ROBOT_IP
+    export MIRO_LOCAL_IP=127.0.0.1
+fi
 source ~/mdk/setup.bash
 source ~/mdk/catkin_ws/devel/setup.bash
 source /etc/bash_completion.d/miro-completion
+EOF
+RUN cat <<'EOF' >> ~/.bashrc
+
+# MDK
+. ~/.bashrc_miro
 EOF
 
 # ---- PIP ----

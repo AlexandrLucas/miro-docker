@@ -32,7 +32,7 @@ services:
       - ${XAUTH}:${XAUTH}:rw
       # Audio (PulseAudio)
       - ${PULSE_SOCKET}:${PULSE_SOCKET}:rw
-      - ${HOME}/${PULSE_COOKIE}:/root/PULSE_COOKIE:ro
+      - ${HOME}/${PULSE_COOKIE}:/root/${PULSE_COOKIE}:ro
       # MiRo catkin workspace
       - mdpv:/root/mdk/catkin_ws/src
 

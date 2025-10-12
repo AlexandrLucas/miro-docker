@@ -25,14 +25,14 @@
 
 ## 🧪 In Progress
 
-- [x] Fix occasional GDK X (MIT-SHM) error
-- [x] More robust IP handling in `miro`
-- [x] Fix tone not playing in MiRo GUI
-- [x] Cannot run multiple `miro demo` instances
+- [ ] Fix occasional GDK X (MIT-SHM) error
+- [ ] Fix tone not playing in MiRo GUI
 
 ---
 
 ## 📦 Completed
 
+- [x] Cannot run multiple `miro demo` instances
+- [x] More robust IP handling in `miro`
 - [x] Introduce a single `miro` command for all common operations inside docker
 - [x] Fix Cairo dependency (mics visualisation)
