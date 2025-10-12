@@ -108,7 +108,7 @@ RUN cd ~/mdk/share/python/miro2/ && git clone --branch miro-docker \
 RUN cd ~/mdk/catkin_ws/src && git clone 'https://github.com/AlexandrLucas/COM3528'
 COPY --chmod=0755 ./tools/miro /usr/local/bin/miro
 COPY --chmod=0755 ./tools/miro-completion /etc/bash_completion.d/miro-completion
-RUN touch ~/.miro2/config/miro-robot-ip
+RUN echo "192.168.138.101" > "/root/.miro2/config/miro-robot-ip"
 
 # ---- Update .bashrc ----
 RUN sed -i '/# MDK/d; /source ~\/mdk\/setup\.bash/d' ~/.bashrc && \
@@ -148,6 +148,7 @@ RUN if [ "${GIT_BRANCH}" = "master" ]; then \
     fi
 
 # ---- Final cleanup ----
+RUN source $HOME/.bashrc && /usr/local/bin/miro mode sim
 RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
 catkin build && catkin clean -y && catkin build && \
 cd ~/mdk/catkin_ws/build/miro2_msg && make install

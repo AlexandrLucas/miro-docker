@@ -230,7 +230,7 @@ case "$COMMAND" in
         if [[ "${2:-}" == "update" ]]; then
             read -rp "Enter new robot IP: " NEW_IP
             export MIRO_ROBOT_IP="$NEW_IP"
-            echo "$NEW_IP" > "~/.miro2/config/miro-robot-ip"
+            echo "$NEW_IP" > "${MIRO_DIR_CONFIG}/miro-robot-ip"
             success "Updated MIRO_ROBOT_IP to $NEW_IP"
         else
             info "Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP}"
