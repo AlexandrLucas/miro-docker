@@ -148,7 +148,6 @@ RUN if [ "${GIT_BRANCH}" = "master" ]; then \
     fi
 
 # ---- Final cleanup ----
-RUN source $HOME/.bashrc && /usr/local/bin/miro mode sim
 RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
 catkin build && catkin clean -y && catkin build && \
 cd ~/mdk/catkin_ws/build/miro2_msg && make install
