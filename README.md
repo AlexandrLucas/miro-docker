@@ -6,13 +6,13 @@ MiRo & MiRo Developer Kit simulation and development environment in Docker.
 ## ⚙️ Installation
 Installation process depends on the OS of the host machine.
 
-See [INSTALL.md](docs/INSTALL.md) for full setup instructions.
+See [INSTALL](docs/INSTALL.md) for full setup instructions.
 
 ## 📝 Changelog
-See [CHANGELOG.md](docs/CHANGELOG.md) for version history and release notes.
+See [CHANGELOG](docs/CHANGELOG.md) for version history and release notes.
 
 ## 🧠 TODO
-See [TODO.md](docs/TODO.md) for planned improvements.
+See [TODO](docs/TODO.md) for planned improvements.
 
 ## 🚀 Quick Start
 
