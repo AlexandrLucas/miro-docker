@@ -88,6 +88,7 @@ switch_mode() {
     fi
 
     success "Mode switched to: $mode."
+    info "Re-open Docker terminal tabs or source ~/.bashrc"
 }
 
 run_gui() {
@@ -239,6 +240,7 @@ case "$COMMAND" in
             export MIRO_ROBOT_IP="$NEW_IP"
             echo "$NEW_IP" > "${MIRO_DIR_CONFIG}/miro-robot-ip"
             success "Updated MIRO_ROBOT_IP to $NEW_IP"
+            info "Re-open Docker terminal tabs or source ~/.bashrc"
         else
             info "Current MIRO_ROBOT_IP=${MIRO_ROBOT_IP:-unset}"
         fi
