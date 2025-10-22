@@ -12,14 +12,13 @@
 3. Run the test containers (both docker and GPU, if present) to make sure the system is setup correctly.
 4. Follow the Quick Start instructions on the main [README](../README.md) page.
 
-
 ## Windows
 There are two common approaches:
 
-* WSL2 approach: Run Docker inside a WSL2 Linux distribution (e.g. Ubuntu 24.04).
+* **WSL2 approach** (recommended): Run Docker inside a WSL2 Linux distribution (e.g. Ubuntu 24.04).
 This uses the Windows Subsystem for Linux, potentially with WSLg for GUI and audio.
 
-* Docker Desktop approach: Run Docker natively via Docker Desktop for Windows 
+* **Docker Desktop approach**: Run Docker natively via Docker Desktop for Windows 
 (Hyper-V or WSL2 backend), using Windows paths and services.
 
-To be continued...
+### Windows 10 with WSL2

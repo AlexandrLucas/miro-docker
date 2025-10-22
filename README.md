@@ -2,7 +2,6 @@
 
 MiRo & MiRo Developer Kit simulation and development environment in Docker.
 
-
 ## ⚙️ Installation
 Installation process depends on the OS of the host machine.
 

@@ -3,6 +3,16 @@
 This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
+## [v3.1.0] - 2025-10-22
+
+### Added
+ - 
+
+### Changed
+ - Enforce LF line endings for cross-platforms
+
+### Fixed
+ - Various tweaks to `miro` command
 
 ## [v3.0.0] - 2025-10-11
 ### Added
