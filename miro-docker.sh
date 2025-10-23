@@ -186,13 +186,6 @@ start() {
     CONTAINER_NAME="${C_NAME:-$BASE_CONTAINER_NAME}"
     export CONTAINER_NAME
 
-    if [ -n "${DISPLAY-}" ]; then
-        echo "🔓 Allowing Docker to access X server on $DISPLAY..."
-        xhost +local:docker >/dev/null || echo "⚠️ Could not modify X server access."
-    else
-        echo "⚠️ DISPLAY not set. GUI apps may not work."
-    fi
-
     echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE and $COMPOSE_FILE..."
 # ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" up -d --build
