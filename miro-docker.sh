@@ -156,6 +156,7 @@ get_compose_file() {
 
 # --- Start container ---
 start() {
+    COMPOSE_FILE=$(get_compose_file)
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo "❌ $COMPOSE_FILE not found in current directory."
         return 1
