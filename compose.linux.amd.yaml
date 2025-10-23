@@ -15,8 +15,8 @@ services:
       - .env
 
     environment:
-      DISPLAY: ${DISPLAY}
       # GUI
+      DISPLAY: ${DISPLAY}
       GDK_BACKEND: "x11"
       GDK_DISABLE_XSHM: "1"
       QT_X11_NO_MITSHM: "1"
@@ -25,7 +25,7 @@ services:
       # Sound
       PULSE_SERVER: ${PULSE_SERVER}
       PULSE_COOKIE: /root/${PULSE_COOKIE}
-      # Optional: ROCm runtime path hints
+      # GPU: ROCm runtime path hints
       ROCM_VISIBLE_DEVICES: "all"
       HSA_OVERRIDE_GFX_VERSION: "11.0.0"  # adjust if needed for your GPU
       HIP_VISIBLE_DEVICES: "all"
