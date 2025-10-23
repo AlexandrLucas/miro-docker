@@ -1,19 +1,15 @@
 services:
   miro:
+    env_file:
+      - .env
     image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
     container_name: ${CONTAINER_NAME}
-    # hostname: miro  # Not set up as breaks MDK setup.bash
     privileged: true
     network_mode: host
     tty: true
     stdin_open: true
     restart: unless-stopped
-
     command: bash
-
-    env_file:
-      - .env
-
     environment:
       # GUI
       DISPLAY: ${DISPLAY}
@@ -22,12 +18,12 @@ services:
       QT_X11_NO_MITSHM: "1"
       OPENCV_VIDEOIO_MSMF_DISABLE: "1"
       OPENCV_VIDEOIO_X11_NO_SHM: "1"
-      # GPU
-      NVIDIA_VISIBLE_DEVICES: "all"
-      NVIDIA_DRIVER_CAPABILITIES: "all"
       # Sound
       PULSE_SERVER: ${PULSE_SERVER}
       PULSE_COOKIE: /root/${PULSE_COOKIE}
+      # GPU
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "all"
 
     volumes:
       # X11 forwarding

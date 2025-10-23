@@ -1,19 +1,15 @@
 services:
   miro:
+    env_file:
+      - .env
     image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
     container_name: ${CONTAINER_NAME}
-    # hostname: miro  # Not set up as breaks MDK setup.bash
     privileged: true
     network_mode: host
     tty: true
     stdin_open: true
     restart: unless-stopped
-
     command: bash
-
-    env_file:
-      - .env
-
     environment:
       DISPLAY: ${DISPLAY}
       # GUI
