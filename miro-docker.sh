@@ -96,6 +96,64 @@ check_running() {
     return 0
 }
 
+get_compose_file() {
+    local uname_out env gpu compose
+    uname_out="$(uname -s 2>/dev/null || echo Unknown)"
+
+    # --- Detect base environment ---
+    case "$uname_out" in
+        Linux*)
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                env="wsl"
+            elif command -v lsb_release >/dev/null 2>&1 && [[ "$(lsb_release -is)" == "Ubuntu" ]]; then
+                env="linux"
+            else
+                env="linux"
+            fi ;;
+        Darwin*) env="mac" ;;
+        MINGW*|MSYS*|CYGWIN*) env="windows" ;;
+        *) env="unknown" ;;
+    esac
+
+    # --- Detect GPU type (nvidia / amd / none) ---
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        gpu="nvidia"
+    elif lspci 2>/dev/null | grep -qi 'nvidia'; then
+        gpu="nvidia"
+    elif lspci 2>/dev/null | grep -qi 'amd' || lspci 2>/dev/null | grep -qi 'advanced micro devices'; then
+        gpu="amd"
+    elif [[ "$env" == "mac" ]] && system_profiler SPDisplaysDataType 2>/dev/null | grep -q "AMD"; then
+        gpu="amd"
+    else
+        gpu="none"
+    fi
+
+    # --- Build compose filename, filtering out invalid combos ---
+    case "$env" in
+        mac)
+            # Macs use Apple Silicon or AMD, but Docker Desktop hides GPU passthrough anyway
+            compose="compose.mac.yaml"
+            ;;
+        windows|wsl|linux)
+            if [[ "$gpu" == "nvidia" && -f "compose.${env}.nvidia.yaml" ]]; then
+                compose="compose.${env}.nvidia.yaml"
+            elif [[ "$gpu" == "amd" && -f "compose.${env}.amd.yaml" ]]; then
+                compose="compose.${env}.amd.yaml"
+            elif [[ -f "compose.${env}.yaml" ]]; then
+                compose="compose.${env}.yaml"
+            else
+                compose="compose.yaml"
+            fi
+            ;;
+        *)
+            compose="compose.yaml"
+            ;;
+    esac
+
+    echo "$compose"
+}
+
+
 # --- Start container ---
 start() {
     if [ ! -f "$COMPOSE_FILE" ]; then
@@ -134,7 +192,7 @@ start() {
         echo "⚠️ DISPLAY not set. GUI apps may not work."
     fi
 
-    echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE..."
+    echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE and $COMPOSE_FILE..."
 # ------------------------------------------------------------------------------
     docker compose -f "$COMPOSE_FILE" up -d --build
 # ------------------------------------------------------------------------------

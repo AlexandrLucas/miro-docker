@@ -17,7 +17,7 @@
 
 ## 🌱 Low Priority
 
-- [ ] Plug-in (buttons) to similate touch in Gazebo
+- [ ] Plug-in (buttons) to simulate touch in Gazebo
 - [ ] Handle running multiple containers in `miro-docker.sh`
 
 ---

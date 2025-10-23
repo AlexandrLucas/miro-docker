@@ -16,37 +16,9 @@ services:
 
     environment:
       DISPLAY: ${DISPLAY}
-      NVIDIA_VISIBLE_DEVICES: "all"
-      NVIDIA_DRIVER_CAPABILITIES: "all"
-      GDK_BACKEND: "x11"
-      GDK_DISABLE_XSHM: "1"
-      QT_X11_NO_MITSHM: "1"
-      OPENCV_VIDEOIO_MSMF_DISABLE: "1"
-      OPENCV_VIDEOIO_X11_NO_SHM: "1"
-      PULSE_SERVER: ${PULSE_SERVER}
-      PULSE_COOKIE: /root/${PULSE_COOKIE}
-
     volumes:
-      # X11 forwarding
-      - ${X11UNIX}:${X11UNIX}:rw
-      - ${XAUTH}:${XAUTH}:rw
-      # Audio (PulseAudio)
-      - ${PULSE_SOCKET}:${PULSE_SOCKET}:rw
-      - ${HOME}/${PULSE_COOKIE}:/root/${PULSE_COOKIE}:ro
       # MiRo catkin workspace
       - mdpv:/root/mdk/catkin_ws/src
 
-    devices:
-      - /dev/snd:/dev/snd
-    group_add:
-      - audio
-
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 volumes:
   mdpv:
