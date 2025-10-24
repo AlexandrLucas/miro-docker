@@ -43,14 +43,8 @@ COMMAND=${1:-}
 
 # --- Show usage ---
 show_usage() {
-    grep '^#/' "$0" | cut -c4-
+    awk '/^#/{if(NR>1)print substr($0,2)} !/^#/{if(NR>1)exit}' "$0"
 }
-
-if [ -z "$COMMAND" ] || [[ "$COMMAND" == "--help" || "$COMMAND" == "-h" ]]; then
-    show_usage
-    exit 0
-fi
-
 # --- Docker Compose wrapper ---
 dc() {
     docker compose -f "$COMPOSE_FILE" "$@"
@@ -214,8 +208,6 @@ case "$COMMAND" in
     term)  term ;;
     save)  save ;;
     *)
-        echo "❌ Invalid command: $COMMAND"
-        echo
         show_usage
         exit 1
         ;;
