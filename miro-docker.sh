@@ -20,6 +20,7 @@
 #   IMAGE_TAG         - Default image tag
 #   CONTAINER_NAME    - Default container name
 #   DISPLAY           - X server display (defaults to ":0")
+#   STATE_FILE        - Path to persistent state file (default: ~/.miro-docker-state)
 #
 # Files:
 #   compose.*.yaml    - Platform/GPU-specific compose files
@@ -33,11 +34,40 @@
 
 set -euo pipefail
 
+# --- Persistent state handling ---
+STATE_FILE="${STATE_FILE:-$HOME/.miro-docker-state}"
+
+# --- Save MiRo container info---
+save_state() {
+    {
+        echo "IMAGE_NAME='$IMAGE_NAME'"
+        echo "IMAGE_TAG='$IMAGE_TAG'"
+        echo "CONTAINER_NAME='$CONTAINER_NAME'"
+    } > "$STATE_FILE"
+}
+
+# --- Load MiRo container info---
+load_state() {
+    [[ -f "$STATE_FILE" ]] || return 0
+    while IFS='=' read -r key raw_value; do
+        value="${raw_value%\"}" ; value="${value#\"}"
+        value="${value%\'}" ; value="${value#\'}"
+
+        case "$key" in
+            IMAGE_NAME|IMAGE_TAG|CONTAINER_NAME)
+                export "$key=$value"
+                ;;
+        esac
+    done < "$STATE_FILE"
+}
+
 # --- Settings ---
 DISPLAY="${DISPLAY:-:0}"
 BASE_IMAGE_NAME="${IMAGE_NAME:-alexandrlucas/miro-docker}"
 BASE_IMAGE_TAG="${IMAGE_TAG:-latest}"
 BASE_CONTAINER_NAME="${CONTAINER_NAME:-miro-docker}"
+
+load_state
 
 COMMAND=${1:-}
 
@@ -45,6 +75,7 @@ COMMAND=${1:-}
 show_usage() {
     awk '/^#/{if(NR>1)print substr($0,2)} !/^#/{if(NR>1)exit}' "$0"
 }
+
 # --- Docker Compose wrapper ---
 dc() {
     docker compose -f "$COMPOSE_FILE" "$@"
@@ -101,7 +132,7 @@ get_compose_file() {
     echo "compose.yaml"
 }
 
-# --- Use `docker ps --filter` ---
+# --- Use state file to identify the correct container ---
 get_container_id() {
     local name="${1:-$BASE_CONTAINER_NAME}"
     local cid
@@ -161,6 +192,9 @@ start() {
     CID=$(get_container_id "$CONTAINER_NAME")
     echo "✅ Started $CONTAINER_NAME (ID: $CID)."
 
+    # Persist state for use in new terminal tabs
+    save_state
+
     echo "💡 Use 'term', 'save', 'stop'."
 }
 
@@ -178,6 +212,9 @@ stop() {
 # ------------------------------------------------------------------------------
     dc down --remove-orphans
 # ------------------------------------------------------------------------------
+    # Clear stale state
+    [[ -f "$STATE_FILE" ]] && rm -f "$STATE_FILE"
+
     echo "✅ Stopped and removed."
 }
 
