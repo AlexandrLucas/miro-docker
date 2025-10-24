@@ -11,8 +11,8 @@ services:
     restart: unless-stopped
     command: bash
     environment:
-      DISPLAY: ${DISPLAY}
       # GUI
+      DISPLAY: ${DISPLAY}
       GDK_BACKEND: "x11"
       GDK_DISABLE_XSHM: "1"
       QT_X11_NO_MITSHM: "1"

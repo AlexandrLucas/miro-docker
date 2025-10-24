@@ -58,6 +58,7 @@ ask_confirm() {
     [[ "$answer" == "yes" ]]
 }
 
+# --- Select the right compose ---
 get_compose_file() {
     local uname_out env gpu candidates=()
     uname_out="$(uname -s 2>/dev/null || echo Unknown)"
@@ -100,7 +101,7 @@ get_compose_file() {
     echo "compose.yaml"
 }
 
-# --- FIXED: Use `docker ps --filter` instead of `docker compose ps` ---
+# --- Use `docker ps --filter` ---
 get_container_id() {
     local name="${1:-$BASE_CONTAINER_NAME}"
     local cid
@@ -117,7 +118,7 @@ start() {
     COMPOSE_FILE=$(get_compose_file)
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo "❌ $COMPOSE_FILE not found."
-        exit 1
+        return 1
     fi
 
     read -r -p "Enter image NAME [leave blank for $BASE_IMAGE_NAME]: " NAME
@@ -132,12 +133,14 @@ start() {
     echo "🔍 Checking $IMAGE..."
 
     if docker pull "$IMAGE" 2>/dev/null; then
-        echo "✅ Pulled $IMAGE."
+        echo "✅ Pulled image: $IMAGE."
     elif docker image inspect "$IMAGE" >/dev/null 2>&1; then
-        echo "⚠️ Using local $IMAGE."
+        echo "⚠️ Using local image: $IMAGE."
     else
         echo "⚠️ Building from Dockerfile..."
+# ------------------------------------------------------------------------------
         docker build --progress=plain --no-cache -t "$IMAGE" .
+# ------------------------------------------------------------------------------
     fi
 
     read -r -p "Customise container name [leave blank for $BASE_CONTAINER_NAME]: " C_NAME
@@ -145,16 +148,18 @@ start() {
     export CONTAINER_NAME
 
     echo "🚀 Starting $CONTAINER_NAME using $COMPOSE_FILE..."
-    dc up -d --build
 
+    # Check X11 access configuration
+    if xhost +SI:localuser:$(whoami) >/dev/null 2>&1; then
+        echo "🔓 X11 access enabled for Docker."
+    else
+        echo "🔒 Failed to enable X11 access for Docker."
+    fi
+# ------------------------------------------------------------------------------
+    dc up -d --build
+# ------------------------------------------------------------------------------
     CID=$(get_container_id "$CONTAINER_NAME")
     echo "✅ Started $CONTAINER_NAME (ID: $CID)."
-
-    # WSL2: Enable X11
-    if grep -qi microsoft /proc/version 2>/dev/null && command -v xhost >/dev/null 2>&1; then
-        xhost +local:docker >/dev/null 2>&1 || true
-        echo "🔓 X11 access enabled."
-    fi
 
     echo "💡 Use 'term', 'save', 'stop'."
 }
@@ -170,8 +175,9 @@ stop() {
         echo "❌ Aborted."
         return 0
     fi
-
+# ------------------------------------------------------------------------------
     dc down --remove-orphans
+# ------------------------------------------------------------------------------
     echo "✅ Stopped and removed."
 }
 
@@ -182,7 +188,9 @@ term() {
     CID=$(get_container_id "$name") || return 1
 
     echo "🔗 Attaching to $name ($CID). Ctrl+D to exit."
+# ------------------------------------------------------------------------------
     docker exec -it "$CID" /bin/bash
+# ------------------------------------------------------------------------------
 }
 
 # --- Save container ---
@@ -197,16 +205,26 @@ save() {
     NEW_IMAGE="$IMAGE_BASE:$SNAPSHOT_TAG"
 
     echo "💾 Committing to $NEW_IMAGE..."
+# ------------------------------------------------------------------------------
     docker commit "$CID" "$NEW_IMAGE"
+# ------------------------------------------------------------------------------
     echo "✅ Saved as $NEW_IMAGE"
 }
 
 # --- Command dispatcher ---
 case "$COMMAND" in
-    start) start ;;
-    stop)  stop ;;
-    term)  term ;;
-    save)  save ;;
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    term)
+        term
+        ;;
+    save)
+        save
+        ;;
     *)
         show_usage
         exit 1
