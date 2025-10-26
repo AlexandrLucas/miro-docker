@@ -38,11 +38,18 @@ flowchart LR
 Inside the running WSL distro, do the following:
 1. `sudo apt update && sudo apt upgrade && sudo apt autoremove`.
 2. `sudo apt install mesa-utils x11-xserver-utils`
-3. Append `export LIBGL_ALWAYS_SOFTWARE="1"` to your `~/.bashrc` file. This will software rendering for GUI apps.
+3. Append `export LIBGL_ALWAYS_SOFTWARE="1"` to your `~/.bashrc` file. This will enable software rendering for GUI apps.
 4. Unless you want to look into hardware rendering, you can now follow the *Quick Start* instructions on the main [README](../README.md) page.
 
 #### Hardware acceleration for GUI apps
-...
+The following assumes you have a fairly modern GPU card, e.g. NVIDIA RTX series.
+##### Host OS
+Add the following to your `~/.bashrc`:
+```bash
+export LIBGL_ALWAYS_SOFTWARE=0
+export MESA_LOADER_DRIVER_OVERRIDE='d3d12'
+export GALLIUM_DRIVER='d3d12'
+```
 
 ### Sound
 ...

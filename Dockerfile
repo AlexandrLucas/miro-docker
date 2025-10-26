@@ -32,7 +32,9 @@ RUN apt-get update && apt-get install -y \
     xorg-dev \
     eog \
     libegl1-mesa-dev \
+    libgl1-mesa-glx \
     libgles2-mesa-dev \
+    mesa-utils \
     net-tools \
     iproute2 \
     tree \

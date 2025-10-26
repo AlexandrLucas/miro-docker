@@ -11,32 +11,55 @@ services:
     restart: unless-stopped
     command: bash
     environment:
-      # GUI
       DISPLAY: ${DISPLAY}
-      # LIBGL_ALWAYS_SOFTWARE: "0"
-      GDK_BACKEND: "x11"
-      GDK_DISABLE_XSHM: "1"
-      QT_X11_NO_MITSHM: "1"
-      OPENCV_VIDEOIO_MSMF_DISABLE: "1"
-      OPENCV_VIDEOIO_X11_NO_SHM: "1"
-      # Sound
-      PULSE_SERVER: ${PULSE_SERVER}
+      # === X11 ===
+      GDK_BACKEND: x11
+      EGL_PLATFORM: X11
+      GDK_DISABLE_XSHM: 1
+      QT_X11_NO_MITSHM: 1
+      OPENCV_VIDEOIO_MSMF_DISABLE: 1
+      OPENCV_VIDEOIO_X11_NO_SHM: 1
+      LIBGL_DRI3_DISABLE: 1
+      QT_QPA_PLATFORM: xcb
+      # === WSLg Runtime ===
+      XDG_RUNTIME_DIR: /mnt/wslg/runtime-dir
+      WAYLAND_DISPLAY: wayland-0
+      # === FORCE D3D12 + GLX ===
+      LIBGL_ALWAYS_SOFTWARE: 0
+      LIBGL_ALWAYS_INDIRECT: 1
+      MESA_LOADER_DRIVER_OVERRIDE: d3d12
+      GALLIUM_DRIVER: d3d12
+      __GLX_VENDOR_LIBRARY_NAME: mesa
+      # === AUDIO ===
+      PULSE_RUNTIME_PATH: /mnt/wslg/runtime-dir/pulse
+      PULSE_SERVER: unix:/mnt/wslg/runtime-dir/pulse/native
       PULSE_COOKIE: /root/${PULSE_COOKIE}
-
     volumes:
       # X11 forwarding
       - ${X11UNIX}:${X11UNIX}:rw
       - ${XAUTH}:${XAUTH}:rw
+      # Graphics
+      - /mnt/wslg/runtime-dir:/mnt/wslg/runtime-dir
+      - /dev/dxg:/dev/dxg
+      - /dev/snd:/dev/snd
       # Audio (PulseAudio)
       - ${PULSE_SOCKET}:${PULSE_SOCKET}:rw
       - ${HOME}/${PULSE_COOKIE}:/root/${PULSE_COOKIE}:ro
       # MiRo catkin workspace
       - mdpv:/root/mdk/catkin_ws/src
-
     devices:
-      - /dev/snd:/dev/snd
+      - /dev/dxg
+      - /dev/snd
     group_add:
       - audio
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   mdpv:

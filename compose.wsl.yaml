@@ -13,7 +13,6 @@ services:
     environment:
       # GUI
       DISPLAY: ${DISPLAY}
-      # LIBGL_ALWAYS_SOFTWARE: "0"
       GDK_BACKEND: "x11"
       GDK_DISABLE_XSHM: "1"
       QT_X11_NO_MITSHM: "1"
