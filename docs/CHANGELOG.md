@@ -3,13 +3,14 @@
 This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
-## [v3.1.0] - 2025-10-22
+## [v4.0.0] - 2025-10-26
 
 ### Added
- - 
+ - Expanded docs
 
 ### Changed
- - Enforce LF line endings for cross-platforms
+ - Enforce LF line endings for cross-platform work
+ - Split Docker Compose files based on OS and dGPU brand (if present)
 
 ### Fixed
  - Various tweaks to `miro` command

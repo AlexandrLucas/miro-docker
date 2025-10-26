@@ -44,20 +44,22 @@ Inside the running WSL distro, do the following:
 #### Hardware acceleration for GUI apps
 The following assumes you have a fairly modern GPU card, e.g. NVIDIA RTX series.
 ##### Host OS
-Add the following to your `~/.bashrc`:
+1. Ensure your dGPU is always used (profile set to `performance` or manually select).
+2. Install the latest graphics drivers.
+##### WSL distro
+1. Add the following to your `~/.bashrc`:
 ```bash
 export LIBGL_ALWAYS_SOFTWARE=0
+export LIBGL_ALWAYS_INDIRECT=0
 export MESA_LOADER_DRIVER_OVERRIDE='d3d12'
 export GALLIUM_DRIVER='d3d12'
 ```
-
+...
 ### Sound
 ...
-
-
 ### Option 1.2: *Windows with WSL2* (without Docker Desktop)
 1. Follow the steps 1-3 described in option 1.1 under *Host OS*
 2. Then, follow the steps in the *Ubuntu* section inside your WSL Ubuntu distro.
+
 ## Mac
-
-
+Follow the Ubuntu instructions above (skipping hardware acceleration).
