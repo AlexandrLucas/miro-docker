@@ -181,7 +181,7 @@ start() {
     echo "🚀 Starting $CONTAINER_NAME using $COMPOSE_FILE..."
 
     # Check X11 access configuration
-    if xhost +SI:localuser:$(whoami) >/dev/null 2>&1; then
+    if xhost +local:docker >/dev/null 2>&1; then
         echo "🔓 X11 access enabled for Docker."
     else
         echo "🔒 Failed to enable X11 access for Docker."
