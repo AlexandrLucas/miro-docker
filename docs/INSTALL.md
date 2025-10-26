@@ -16,12 +16,14 @@
 ### Option 1.1 (recommended): *Docker Desktop on Windows with WSL2 backend*
 The following simplified diagram represents the intended layered environment:
 
+```mermaid
 flowchart LR
     A["Host OS <br> (Windows 10 or 11)"] --> D["Docker Desktop <br> (Docker-WSL integration)"]
     B --> C["MiRo Docker image <br> (Ubuntu 20.04)"]
     A --> B["WSL distro <br> (e.g. Ubuntu 24.04)"]
     D --> B
     D --> C
+```
 
 #### Host OS
 1. Install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) (the terms WSL2 and WSL are used interchangeably).
