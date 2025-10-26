@@ -2,6 +2,7 @@ services:
   miro:
     image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
     container_name: ${CONTAINER_NAME}
+    privileged: true    
     runtime: nvidia
     network_mode: host
     tty: true
