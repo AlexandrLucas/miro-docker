@@ -10,96 +10,145 @@
 #   ./miro-docker.sh <command>
 #
 # Commands:
-#   start   - Pull/build the Docker image (if needed) and start a container.
-#             Prompts for image name/tag and container name.
-#   stop    - Stop and remove the last started container. Prompts for confirmation.
-#   term    - Attach an interactive shell to the last running container.
-#   save    - Commit the last running container to a new image.
-#             Prompts for a snapshot tag (default: timestamped).
+#   start   - Pull/build the Docker image and start a container.
+#   stop    - Stop and remove the last started container.
+#   term    - Attach an interactive shell.
+#   save    - Commit container to new image.
 #
-# Environment Variables (optional):
-#   IMAGE_NAME        - Default image name (overrides BASE_IMAGE_NAME)
-#   IMAGE_TAG         - Default image tag (overrides BASE_IMAGE_TAG)
-#   CONTAINER_NAME    - Default container name (overrides BASE_CONTAINER_NAME)
-#   DISPLAY           - X server display for GUI apps (defaults to ":0")
+# Environment Variables:
+#   IMAGE_NAME        - Default image name
+#   IMAGE_TAG         - Default image tag
+#   CONTAINER_NAME    - Default container name
+#   DISPLAY           - X server display (defaults to ":0")
+#   STATE_FILE        - Path to persistent state file (default: ~/.miro-docker-state)
 #
 # Files:
-#   compose.yaml      - Docker Compose file, must exist in script folder
-#   Dockerfile        - Used to build local image if not found in registry
-#   ~/.designated_container - Stores last container ID for 'term', 'stop', and 'save'
+#   compose.*.yaml    - Platform/GPU-specific compose files
+#   Dockerfile        - For local build
 #
 # Examples:
 #   ./miro-docker.sh start
 #   ./miro-docker.sh term
 #   ./miro-docker.sh save
 #   ./miro-docker.sh stop
-#
-# Notes:
-#   - Requires Docker and Docker Compose installed.
-#   - For GUI apps, ensure DISPLAY is set and xhost allows local access.
-#   - Designed to be launched via a wrapper/alias (e.g., 'miro-hub')
 
 set -euo pipefail
 
+# --- Persistent state handling ---
+STATE_FILE="${STATE_FILE:-$HOME/.miro-docker-state}"
+
+# --- Save MiRo container info---
+save_state() {
+    {
+        echo "IMAGE_NAME='$IMAGE_NAME'"
+        echo "IMAGE_TAG='$IMAGE_TAG'"
+        echo "CONTAINER_NAME='$CONTAINER_NAME'"
+    } > "$STATE_FILE"
+}
+
+# --- Load MiRo container info---
+load_state() {
+    [[ -f "$STATE_FILE" ]] || return 0
+    while IFS='=' read -r key raw_value; do
+        value="${raw_value%\"}" ; value="${value#\"}"
+        value="${value%\'}" ; value="${value#\'}"
+
+        case "$key" in
+            IMAGE_NAME|IMAGE_TAG|CONTAINER_NAME)
+                export "$key=$value"
+                ;;
+        esac
+    done < "$STATE_FILE"
+}
+
 # --- Settings ---
-# ------------------------------------------------------------------------------
 DISPLAY="${DISPLAY:-:0}"
 BASE_IMAGE_NAME="${IMAGE_NAME:-alexandrlucas/miro-docker}"
 BASE_IMAGE_TAG="${IMAGE_TAG:-latest}"
 BASE_CONTAINER_NAME="${CONTAINER_NAME:-miro-docker}"
-CONTAINER_ID_FILE="$HOME/.designated_container"
-COMPOSE_FILE="compose.yaml"
-# ------------------------------------------------------------------------------
+
+load_state
 
 COMMAND=${1:-}
 
-# --- Show usage function ---
+# --- Show usage ---
 show_usage() {
-    head -n 40 "$0"
+    awk '/^#/{if(NR>1)print substr($0,2)} !/^#/{if(NR>1)exit}' "$0"
 }
 
-# Show usage if no command or --help/-h
-if [ -z "$COMMAND" ] || [[ "$COMMAND" == "--help" || "$COMMAND" == "-h" ]]; then
-    show_usage
-    exit 0
-fi
+# --- Docker Compose wrapper ---
+dc() {
+    docker compose -f "$COMPOSE_FILE" "$@"
+}
 
 # --- Utility functions ---
 ask_confirm() {
     local prompt="${1:-Are you sure?}"
     echo -n "$prompt [yes/no]: "
     read -r answer
-    if [[ "$answer" != "yes" ]]; then
-        echo "❌ Aborted."
-        return 1
-    fi
-    return 0
+    [[ "$answer" == "yes" ]]
 }
 
-check_running() {
-    if [ ! -f "$CONTAINER_ID_FILE" ]; then
-        echo "❌ No running container recorded."
-        return 1
+# --- Select the right compose ---
+get_compose_file() {
+    local uname_out env gpu candidates=()
+    uname_out="$(uname -s 2>/dev/null || echo Unknown)"
+
+    case "$uname_out" in
+        Linux*)
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                env="wsl"
+            else
+                env="linux"
+            fi ;;
+        Darwin*) env="mac" ;;
+        MINGW*|MSYS*|CYGWIN*) env="windows" ;;
+        *) env="unknown" ;;
+    esac
+
+    if command -v nvidia-smi >/dev/null 2>&1 || lspci 2>/dev/null | grep -qi nvidia; then
+        gpu="nvidia"
+    elif lspci 2>/dev/null | grep -qiE 'amd|advanced micro devices'; then
+        gpu="amd"
+    else
+        gpu="none"
     fi
+
+    case "$env" in
+        mac) candidates=("compose.mac.yaml" "compose.yaml") ;;
+        windows|wsl|linux)
+            candidates+=(
+                "compose.${env}.nvidia.yaml"
+                "compose.${env}.amd.yaml"
+                "compose.${env}.yaml"
+                "compose.yaml"
+            ) ;;
+        *) candidates=("compose.yaml") ;;
+    esac
+
+    for f in "${candidates[@]}"; do
+        [[ -f "$f" ]] && echo "$f" && return 0
+    done
+    echo "compose.yaml"
+}
+
+# --- Use state file to identify the correct container ---
+get_container_id() {
+    local name="${1:-$BASE_CONTAINER_NAME}"
     local cid
-    cid=$(<"$CONTAINER_ID_FILE")
-    if [ -z "$cid" ]; then
-        echo "❌ No container ID found in $CONTAINER_ID_FILE."
-        return 1
-    fi
-    # Check if container is actually running
-    if ! docker ps -q --no-trunc | grep -q "$cid"; then
-        echo "❌ Container $cid is not running."
+    cid=$(docker ps --filter "name=^/${name}$" --format '{{.ID}}' | head -n1)
+    if [[ -z "$cid" ]]; then
+        echo "❌ No running container named '$name'." >&2
         return 1
     fi
     echo "$cid"
-    return 0
 }
 
 # --- Start container ---
 start() {
+    COMPOSE_FILE=$(get_compose_file)
     if [ ! -f "$COMPOSE_FILE" ]; then
-        echo "❌ $COMPOSE_FILE not found in current directory."
+        echo "❌ $COMPOSE_FILE not found."
         return 1
     fi
 
@@ -114,88 +163,106 @@ start() {
     IMAGE="$NAME:$TAG"
     echo "🔍 Checking $IMAGE..."
 
-    if docker pull "$IMAGE"; then
-        echo "✅ Pulled/updated $IMAGE from registry."
-    elif docker image inspect "$IMAGE"; then
-        echo "⚠️ Could not pull, but local image $IMAGE exists. Using it."
+    if docker pull "$IMAGE" 2>/dev/null; then
+        echo "✅ Pulled image: $IMAGE."
+    elif docker image inspect "$IMAGE" >/dev/null 2>&1; then
+        echo "⚠️ Using local image: $IMAGE."
     else
-        echo "⚠️ No registry image found and no local copy. Building from Dockerfile..."
+        echo "⚠️ Building from Dockerfile..."
+# ------------------------------------------------------------------------------
         docker build --progress=plain --no-cache -t "$IMAGE" .
+# ------------------------------------------------------------------------------
     fi
 
     read -r -p "Customise container name [leave blank for $BASE_CONTAINER_NAME]: " C_NAME
     CONTAINER_NAME="${C_NAME:-$BASE_CONTAINER_NAME}"
     export CONTAINER_NAME
 
-    if [ -n "${DISPLAY-}" ]; then
-        echo "🔓 Allowing Docker to access X server on $DISPLAY..."
-        xhost +local:docker >/dev/null || echo "⚠️ Could not modify X server access."
+    echo "🚀 Starting $CONTAINER_NAME using $COMPOSE_FILE..."
+
+    # Check X11 access configuration
+    if xhost +SI:localuser:$(whoami) >/dev/null 2>&1; then
+        echo "🔓 X11 access enabled for Docker."
     else
-        echo "⚠️ DISPLAY not set. GUI apps may not work."
+        echo "🔒 Failed to enable X11 access for Docker."
     fi
-
-    echo "🚀 Starting container $CONTAINER_NAME using image $IMAGE..."
 # ------------------------------------------------------------------------------
-    docker compose -f "$COMPOSE_FILE" up -d --build
+    dc up -d --build
 # ------------------------------------------------------------------------------
-    CID=$(docker ps -q --filter "name=$CONTAINER_NAME" --no-trunc | head -n1)
-    echo "$CID" > "$CONTAINER_ID_FILE"
+    CID=$(get_container_id "$CONTAINER_NAME")
+    echo "✅ Started $CONTAINER_NAME (ID: $CID)."
 
-    echo "✅ Container $CONTAINER_NAME with ID $CID started successfully."
-    echo "💡 Tip: Use 'term' to attach a shell, 'save' to snapshot, 'stop' to remove."
+    # Persist state for use in new terminal tabs
+    save_state
 
-    #TODO: multi-container support
+    echo "💡 Use 'term', 'save', 'stop'."
 }
 
 # --- Stop container ---
 stop() {
-    CID=$(check_running 2>/dev/null) || { echo "⚠️ No running containers to stop."; return; }
+    COMPOSE_FILE=$(get_compose_file)
+    local name="${CONTAINER_NAME:-$BASE_CONTAINER_NAME}"
+    CID=$(get_container_id "$name") || return 1
 
-    echo "⚠️ WARNING: This will remove the container. Any unsaved changes will be lost."
-    if ! ask_confirm "Do you really want to proceed? Type 'yes' to continue."; then
-        return
+    echo "⚠️ Stopping and removing $name ($CID)."
+    if ! ask_confirm "Proceed?"; then
+        echo "❌ Aborted."
+        return 0
     fi
+# ------------------------------------------------------------------------------
+    dc down --remove-orphans
+# ------------------------------------------------------------------------------
+    # Clear stale state
+    [[ -f "$STATE_FILE" ]] && rm -f "$STATE_FILE"
 
-    echo "🛑 Stopping container $CID..."
-# ------------------------------------------------------------------------------
-    docker compose -f "$COMPOSE_FILE" down
-# ------------------------------------------------------------------------------
-    echo "✅ Containers stopped."
+    echo "✅ Stopped and removed."
 }
 
-# --- Attach shell to last used container ---
+# --- Attach shell ---
 term() {
-    CID=$(check_running 2>/dev/null) || { echo "⚠️ Cannot attach: no running containers."; return; }
-    echo "💡 Reminder: When done, save your work with 'save' or stop the container using 'stop'."
-    echo "🔗 Attaching shell to container $CID. Press CTRL+D to exit."
+    COMPOSE_FILE=$(get_compose_file)
+    local name="${CONTAINER_NAME:-$BASE_CONTAINER_NAME}"
+    CID=$(get_container_id "$name") || return 1
+
+    echo "🔗 Attaching to $name ($CID). Ctrl+D to exit."
 # ------------------------------------------------------------------------------
-    docker exec -it --privileged "$CID" /bin/bash
+    docker exec -it "$CID" /bin/bash
 # ------------------------------------------------------------------------------
 }
 
-# --- Save container state as new image ---
+# --- Save container ---
 save() {
-    CID=$(check_running 2>/dev/null) || { echo "⚠️ Cannot save: no running containers."; return; }
+    COMPOSE_FILE=$(get_compose_file)
+    local name="${CONTAINER_NAME:-$BASE_CONTAINER_NAME}"
+    CID=$(get_container_id "$name") || return 1
 
-    IMAGE_NAME=$(docker inspect --format='{{.Config.Image}}' "$CID" 2>/dev/null | cut -d':' -f1)
+    IMAGE_BASE=$(docker inspect --format='{{.Config.Image}}' "$CID" | cut -d: -f1)
+    read -r -p "Enter snapshot tag [default: snapshot-YYYYMMDD_HHMMSS]: " SNAPSHOT_TAG
+    SNAPSHOT_TAG="${SNAPSHOT_TAG:-snapshot-$(date +%Y%m%d_%H%M%S)}"
+    NEW_IMAGE="$IMAGE_BASE:$SNAPSHOT_TAG"
 
-    read -r -p "Enter snapshot tag [default: timestamped]: " SNAPSHOT_TAG
-    SNAPSHOT_TAG="${SNAPSHOT_TAG:-$(date +%Y%m%d_%H%M%S)}"
-    IMAGE="$IMAGE_NAME:snapshot_${SNAPSHOT_TAG}"
-
-    docker commit "$CID" "$IMAGE"
-    echo "✅ Container $CID saved as image: $IMAGE"
+    echo "💾 Committing to $NEW_IMAGE..."
+# ------------------------------------------------------------------------------
+    docker commit "$CID" "$NEW_IMAGE"
+# ------------------------------------------------------------------------------
+    echo "✅ Saved as $NEW_IMAGE"
 }
 
 # --- Command dispatcher ---
-case $COMMAND in
-    start) start ;;
-    stop) stop ;;
-    term) term ;;
-    save) save ;;
+case "$COMMAND" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    term)
+        term
+        ;;
+    save)
+        save
+        ;;
     *)
-        echo "❌ Invalid input."
-        echo
         show_usage
         exit 1
         ;;

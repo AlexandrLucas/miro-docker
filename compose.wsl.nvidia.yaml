@@ -1,0 +1,66 @@
+services:
+  miro:
+    env_file:
+      - .env
+    image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME}
+    privileged: true
+    network_mode: host
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    command: bash
+    environment:
+      DISPLAY: ${DISPLAY}
+      # === X11 ===
+      GDK_BACKEND: x11
+      EGL_PLATFORM: x11
+      GDK_DISABLE_XSHM: 1
+      QT_X11_NO_MITSHM: 1
+      OPENCV_VIDEOIO_MSMF_DISABLE: 1
+      OPENCV_VIDEOIO_X11_NO_SHM: 1
+      LIBGL_DRI3_DISABLE: 1
+      QT_QPA_PLATFORM: xcb
+      # === WSLg Runtime ===
+      XDG_RUNTIME_DIR: /mnt/wslg/runtime-dir
+      WAYLAND_DISPLAY: wayland-0
+      # === FORCE D3D12 + GLX ===
+      LIBGL_ALWAYS_SOFTWARE: 0
+      LIBGL_ALWAYS_INDIRECT: 0
+      # MESA_LOADER_DRIVER_OVERRIDE: d3d12
+      # GALLIUM_DRIVER: d3d12
+      # __GLX_VENDOR_LIBRARY_NAME: mesa
+      # === AUDIO ===
+      PULSE_RUNTIME_PATH: /mnt/wslg/runtime-dir/pulse
+      PULSE_SERVER: unix:/mnt/wslg/runtime-dir/pulse/native
+      PULSE_COOKIE: /root/${PULSE_COOKIE}
+    volumes:
+      # X11 forwarding
+      - ${X11UNIX}:${X11UNIX}:rw
+      - ${XAUTH}:${XAUTH}:rw
+      # Graphics
+      - /mnt/wslg/runtime-dir:/mnt/wslg/runtime-dir
+      - /dev/dxg:/dev/dxg
+      - /dev/snd:/dev/snd
+      # Audio (PulseAudio)
+      - ${PULSE_SOCKET}:${PULSE_SOCKET}:rw
+      - ${HOME}/${PULSE_COOKIE}:/root/${PULSE_COOKIE}:ro
+      # MiRo catkin workspace
+      - mdpv:/root/mdk/catkin_ws/src
+    devices:
+      - /dev/dxg
+      - /dev/snd
+      - /dev/dri
+    group_add:
+      - audio
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  mdpv:

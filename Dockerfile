@@ -32,7 +32,9 @@ RUN apt-get update && apt-get install -y \
     xorg-dev \
     eog \
     libegl1-mesa-dev \
+    libgl1-mesa-glx \
     libgles2-mesa-dev \
+    mesa-utils \
     net-tools \
     iproute2 \
     tree \
@@ -124,6 +126,7 @@ eval "$(starship init bash)"
 EOF
 fi
 EOT
+# Create .bashrc_miro addendum
 RUN cat <<'EOF' > ~/.bashrc_miro
 # MDK
 if [ ! -f ~/.miro2/config/miro-mode ]; then
@@ -138,6 +141,7 @@ source ~/mdk/setup.bash
 source ~/mdk/catkin_ws/devel/setup.bash
 source /etc/bash_completion.d/miro-completion
 EOF
+# Append to .bashrc
 RUN cat <<'EOF' >> ~/.bashrc
 
 # MDK
@@ -159,7 +163,7 @@ RUN if [ "${GIT_BRANCH}" = "master" ]; then \
         yes | unminimize; \
     fi
 
-# ---- Final cleanup ----
+# ---- Final clean-up ----
 RUN source ~/mdk/setup.bash && cd ~/mdk/catkin_ws && \
 catkin build && catkin clean -y && catkin build && \
 cd ~/mdk/catkin_ws/build/miro2_msg && make install

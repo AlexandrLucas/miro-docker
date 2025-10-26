@@ -21,6 +21,10 @@ services:
       # Sound
       PULSE_SERVER: ${PULSE_SERVER}
       PULSE_COOKIE: /root/${PULSE_COOKIE}
+      # GPU: ROCm runtime path hints
+      ROCM_VISIBLE_DEVICES: "all"
+      HSA_OVERRIDE_GFX_VERSION: "11.0.0"  # adjust if needed for your GPU
+      HIP_VISIBLE_DEVICES: "all"
 
     volumes:
       # X11 forwarding
@@ -34,8 +38,20 @@ services:
 
     devices:
       - /dev/snd:/dev/snd
+      # AMD GPU access (ROCm and Mesa)
+      - /dev/dri:/dev/dri
+      - /dev/kfd:/dev/kfd
     group_add:
+      - video
       - audio
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amd
+              count: all
+              capabilities: [gpu]
 
 volumes:
   mdpv:
