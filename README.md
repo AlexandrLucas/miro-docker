@@ -30,7 +30,7 @@ This allows to run the script from any folder.
 ### MiRo Docker
 Check for the Starship Docker prompt to ensure you're in the right place:
 
-![starship docker prompt](docs\figs\starship-docker.png)
+![starship docker prompt](docs/figs/starship-docker.png)
 
 The MiRo docker image ships with an all-in-one `miro` script.  
 Below are some examples of the functionality it provides.
