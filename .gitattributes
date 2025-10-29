@@ -1,2 +1,34 @@
-# Enforce LF for all text files
+# ———————————————————————————————————————————————————————————————————
+# 1. Default: Normalize all text files to LF
+# ———————————————————————————————————————————————————————————————————
 * text eol=lf
+
+# ———————————————————————————————————————————————————————————————————
+# 2. Binary files: Disable text processing (-text) and diff
+# ———————————————————————————————————————————————————————————————————
+# === IMAGES ===
+*.png   -text diff
+*.jpg   -text diff
+*.jpeg  -text diff
+*.gif   -text diff
+*.ico   -text diff
+*.bmp   -text diff
+*.webp  -text diff
+
+# Archives
+*.zip   -text
+*.tar   -text
+*.gz    -text
+*.7z    -text
+
+# Executables/Libraries
+*.exe   -text
+*.dll   -text
+*.so    -text
+*.bin   -text
+
+# Documents (binary)
+*.pdf   -text
+*.docx  -text diff=zip
+*.xlsx  -text diff=zip
+*.pptx  -text diff=zip
