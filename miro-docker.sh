@@ -93,10 +93,9 @@ ask_confirm() {
 get_compose_file() {
     local uname_out env gpu candidates=()
     uname_out="$(uname -s 2>/dev/null || echo Unknown)"
-
     case "$uname_out" in
         Linux*)
-            if grep -qi microsoft /proc/version 2>/dev/null; then
+            if [[ -r /proc/version ]] && grep -qi microsoft /proc/version 2>/dev/null; then
                 env="wsl"
             else
                 env="linux"
@@ -106,28 +105,31 @@ get_compose_file() {
         *) env="unknown" ;;
     esac
 
-    if command -v nvidia-smi >/dev/null 2>&1 || lspci 2>/dev/null | grep -qi nvidia; then
+    gpu="none"
+    if command -v nvidia-smi >/dev/null 2>&1; then
         gpu="nvidia"
-    elif lspci 2>/dev/null | grep -qiE 'amd|advanced micro devices'; then
-        gpu="amd"
-    else
-        gpu="none"
+    elif command -v lspci >/dev/null 2>&1; then
+        if lspci 2>/dev/null | grep -qi nvidia; then
+            gpu="nvidia"
+        elif lspci 2>/dev/null | grep -qiE 'amd|advanced micro devices'; then
+            gpu="amd"
+        fi
     fi
 
     case "$env" in
-        mac) candidates=("compose.mac.yaml" "compose.yaml") ;;
+        mac)
+            candidates=("compose.mac.yaml" "compose.yaml") ;;
         windows|wsl|linux)
-            candidates+=(
-                "compose.${env}.nvidia.yaml"
-                "compose.${env}.amd.yaml"
-                "compose.${env}.yaml"
-                "compose.yaml"
-            ) ;;
+            case "$gpu" in
+                nvidia) candidates=("compose.${env}.nvidia.yaml" "compose.${env}.yaml" "compose.yaml") ;;
+                amd)    candidates=("compose.${env}.amd.yaml" "compose.${env}.yaml" "compose.yaml") ;;
+                none)   candidates=("compose.${env}.yaml" "compose.yaml") ;;
+            esac ;;
         *) candidates=("compose.yaml") ;;
     esac
 
     for f in "${candidates[@]}"; do
-        [[ -f "$f" ]] && echo "$f" && return 0
+        [[ -f "$f" ]] && { echo "$f"; return; }
     done
     echo "compose.yaml"
 }
